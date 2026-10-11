@@ -24,7 +24,9 @@ info:
     owner's library; the reply (or the final `done` event of a stream) then carries the saved document's `id`.
 
     **For servers only.** Call the API from your own server, never from a web page: a key in a page is a key anyone
-    can read, and browsers from other sites are refused.
+    can read, and browsers from other sites are refused. The one exception is a browser extension (such as the one in
+    `extension/` of the repository): the browser sets its origin and a web page cannot forge it, so it may call the
+    `/v1` routes with a key.
 
     **Streaming.** Add `?stream=true` to a summarize call to receive server-sent events instead of one reply: lines of
     `data: {json}` where `type` is `status` (progress), `delta` (a piece of the summary, in `text`), `done` or `error`.
