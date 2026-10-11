@@ -157,12 +157,16 @@ jobs:
       # scripts inside a page of an add-on ("does not support browsing contexts in privileged scope"), and the test needs
       # that to find the page's tab. That is a limit of the tool, not of the extension, which also has to work on 140.
       - uses: browser-actions/setup-firefox@v1
+        id: esr
         with:
           firefox-version: latest-esr
       - name: Load it into a real Firefox and use it
+        env:
+          # The runner already has a newer Firefox first on its path: say which one to use.
+          FIREFOX_BIN: ${{ steps.esr.outputs.firefox-path }}
         run: |
           pip install selenium==4.51.0
-          firefox --version || true
+          "$FIREFOX_BIN" --version
           # The output is kept, and when the test fails its end is also written as an annotation of the run, where it can be read
           # without opening the log.
           if ! python extension/test/firefox/run_firefox_test.py > "$RUNNER_TEMP/firefox-test.log" 2>&1; then
