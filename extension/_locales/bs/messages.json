@@ -1,0 +1,257 @@
+{
+  "extName": {
+    "message": "Inkling"
+  },
+  "extDescription": {
+    "message": "Sažmite stranicu koju čitate ili označeni tekst pomoću svog Inkling računa."
+  },
+  "actionTitle": {
+    "message": "Sažmi pomoću Inklinga"
+  },
+  "setupTitle": {
+    "message": "Povežite Inkling"
+  },
+  "setupText": {
+    "message": "Dodajte adresu svog Inklinga i API ključ da biste počeli. Ključ napravite na stranici svog računa."
+  },
+  "openSettings": {
+    "message": "Otvori postavke"
+  },
+  "settings": {
+    "message": "Postavke"
+  },
+  "untitledPage": {
+    "message": "Stranica bez naslova"
+  },
+  "summarizePage": {
+    "message": "Sažmi ovu stranicu"
+  },
+  "summarizeSelection": {
+    "message": "Sažmi označeno"
+  },
+  "selectionInfo": {
+    "message": "Označeno riječi: $COUNT$",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "lengthLabel": {
+    "message": "Dužina"
+  },
+  "lengthShort": {
+    "message": "Kratko (oko 100 riječi)"
+  },
+  "lengthMedium": {
+    "message": "Srednje (oko 150)"
+  },
+  "lengthLong": {
+    "message": "Dugo (oko 300)"
+  },
+  "lengthDetailed": {
+    "message": "Detaljno (oko 500)"
+  },
+  "styleLabel": {
+    "message": "Stil"
+  },
+  "styleDefault": {
+    "message": "Standardno"
+  },
+  "styleBullets": {
+    "message": "Točke"
+  },
+  "styleBrief": {
+    "message": "Sažeto"
+  },
+  "styleSimple": {
+    "message": "Jednostavan jezik"
+  },
+  "styleTakeaways": {
+    "message": "Ključni zaključci"
+  },
+  "keepLabel": {
+    "message": "Zadrži u mojoj Inkling biblioteci"
+  },
+  "working": {
+    "message": "Čitanje i sažimanje…"
+  },
+  "cancel": {
+    "message": "Odustani"
+  },
+  "resultLabel": {
+    "message": "Sažetak"
+  },
+  "copy": {
+    "message": "Kopiraj"
+  },
+  "copied": {
+    "message": "Kopirano"
+  },
+  "again": {
+    "message": "Sažmi ponovo"
+  },
+  "savedNote": {
+    "message": "Spremljeno u vašu biblioteku."
+  },
+  "quotaLeft": {
+    "message": "Danas vam je ostalo sažetaka: $COUNT$.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "cannotRead": {
+    "message": "Inkling ne može čitati ovu vrstu stranice (na primjer stranicu postavki preglednika ili Chrome Web Store). Otvorite običnu web stranicu i pokušajte ponovo."
+  },
+  "noText": {
+    "message": "Na ovoj stranici nema teksta za sažimanje."
+  },
+  "allowTitle": {
+    "message": "Dozvolite pristup svom Inkling poslužitelju"
+  },
+  "allowText": {
+    "message": "Proširenju je potrebna vaša dozvola za komunikaciju s $HOST$.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "allowButton": {
+    "message": "Dozvoli"
+  },
+  "permissionDenied": {
+    "message": "Bez te dozvole proširenje ne može doći do vašeg Inkling poslužitelja."
+  },
+  "errNetwork": {
+    "message": "Nije moguće doći do $HOST$. Provjerite adresu u postavkama i svoju vezu.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "errInvalidKey": {
+    "message": "API ključ nije prihvaćen. Provjerite ga u postavkama ili napravite novi na stranici svog Inkling računa."
+  },
+  "errExpiredKey": {
+    "message": "Ovaj API ključ je istekao. Napravite novi na stranici svog Inkling računa."
+  },
+  "errKeyLimit": {
+    "message": "Ovaj ključ je potrošio dnevni limit. Vraća se u ponoć UTC."
+  },
+  "errQuota": {
+    "message": "Vaša dnevna kvota je potrošena. Vraća se u ponoć UTC."
+  },
+  "errRateLimit": {
+    "message": "Previše zahtjeva. Pričekajte $COUNT$ sekundi i pokušajte ponovo.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "errRateLimitSoon": {
+    "message": "Previše zahtjeva. Pričekajte trenutak i pokušajte ponovo."
+  },
+  "errTooLarge": {
+    "message": "Ova stranica ima previše teksta za sažimanje odjednom. Označite dio koji želite i pokušajte ponovo."
+  },
+  "errPaused": {
+    "message": "Inkling je za danas pauzirao sažimanje. Pokušajte kasnije."
+  },
+  "errAi": {
+    "message": "Sažetak trenutno nije moguće napraviti. Pokušajte ponovo za trenutak."
+  },
+  "errBadRequest": {
+    "message": "Inkling nije prihvatio ovaj zahtjev: $MESSAGE$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "errUnknown": {
+    "message": "Nešto je pošlo po zlu (greška $STATUS$).",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "Inkling postavke"
+  },
+  "addressLabel": {
+    "message": "Inkling adresa"
+  },
+  "addressHint": {
+    "message": "Web adresa vašeg Inkling poslužitelja, na primjer https://api.example.com. Obični http dopušten je samo za localhost."
+  },
+  "keyLabel": {
+    "message": "API ključ"
+  },
+  "keyHint": {
+    "message": "Napravite ga na stranici svog Inkling računa. Čuva se samo u ovom pregledniku i šalje samo na gornju adresu."
+  },
+  "showKey": {
+    "message": "Prikaži"
+  },
+  "hideKey": {
+    "message": "Sakrij"
+  },
+  "defaultsTitle": {
+    "message": "Zadane vrijednosti"
+  },
+  "languageLabel": {
+    "message": "Jezik sažetka"
+  },
+  "saveButton": {
+    "message": "Spremi"
+  },
+  "saved": {
+    "message": "Postavke su spremljene."
+  },
+  "testButton": {
+    "message": "Testiraj vezu"
+  },
+  "testOk": {
+    "message": "Povezano. Ključ „$NAME$“: danas iskorišteno $USED$ od $LIMIT$ zahtjeva.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "used": {
+        "content": "$2"
+      },
+      "limit": {
+        "content": "$3"
+      }
+    }
+  },
+  "testOkNoLimit": {
+    "message": "Povezano. Ključ „$NAME$“: danas iskorišteno zahtjeva: $USED$.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "used": {
+        "content": "$2"
+      }
+    }
+  },
+  "errAddress": {
+    "message": "Unesite ispravnu adresu koja počinje s https:// (http:// radi samo za localhost)."
+  },
+  "errKeyFormat": {
+    "message": "Inkling API ključ počinje s ink_."
+  },
+  "privacyTitle": {
+    "message": "Što se kamo šalje"
+  },
+  "privacyText": {
+    "message": "Tekst stranice (ili vašeg odabira) šalje se na gornju Inkling adresu kad pritisnete gumb, i nigdje drugdje. Ništa se ne čita u pozadini i ništa se ne šalje dok to ne zatražite."
+  }
+}

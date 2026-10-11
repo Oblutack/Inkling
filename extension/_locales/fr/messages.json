@@ -1,0 +1,257 @@
+{
+  "extName": {
+    "message": "Inkling"
+  },
+  "extDescription": {
+    "message": "Résumez la page que vous lisez, ou le texte sélectionné, avec votre compte Inkling."
+  },
+  "actionTitle": {
+    "message": "Résumer avec Inkling"
+  },
+  "setupTitle": {
+    "message": "Connecter Inkling"
+  },
+  "setupText": {
+    "message": "Ajoutez l'adresse de votre Inkling et une clé d'API pour commencer. Vous créez la clé sur la page de votre compte."
+  },
+  "openSettings": {
+    "message": "Ouvrir les réglages"
+  },
+  "settings": {
+    "message": "Réglages"
+  },
+  "untitledPage": {
+    "message": "Page sans titre"
+  },
+  "summarizePage": {
+    "message": "Résumer cette page"
+  },
+  "summarizeSelection": {
+    "message": "Résumer la sélection"
+  },
+  "selectionInfo": {
+    "message": "$COUNT$ mots sélectionnés",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "lengthLabel": {
+    "message": "Longueur"
+  },
+  "lengthShort": {
+    "message": "Court (environ 100 mots)"
+  },
+  "lengthMedium": {
+    "message": "Moyen (environ 150)"
+  },
+  "lengthLong": {
+    "message": "Long (environ 300)"
+  },
+  "lengthDetailed": {
+    "message": "Détaillé (environ 500)"
+  },
+  "styleLabel": {
+    "message": "Style"
+  },
+  "styleDefault": {
+    "message": "Standard"
+  },
+  "styleBullets": {
+    "message": "Puces"
+  },
+  "styleBrief": {
+    "message": "Bref"
+  },
+  "styleSimple": {
+    "message": "Langage simple"
+  },
+  "styleTakeaways": {
+    "message": "Points clés"
+  },
+  "keepLabel": {
+    "message": "Le garder dans ma bibliothèque Inkling"
+  },
+  "working": {
+    "message": "Lecture et résumé en cours…"
+  },
+  "cancel": {
+    "message": "Annuler"
+  },
+  "resultLabel": {
+    "message": "Résumé"
+  },
+  "copy": {
+    "message": "Copier"
+  },
+  "copied": {
+    "message": "Copié"
+  },
+  "again": {
+    "message": "Résumer à nouveau"
+  },
+  "savedNote": {
+    "message": "Enregistré dans votre bibliothèque."
+  },
+  "quotaLeft": {
+    "message": "Il vous reste $COUNT$ résumés aujourd'hui.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "cannotRead": {
+    "message": "Inkling ne peut pas lire ce type de page (par exemple une page de réglages du navigateur ou le Chrome Web Store). Ouvrez une page web normale et réessayez."
+  },
+  "noText": {
+    "message": "Il n'y a pas de texte à résumer sur cette page."
+  },
+  "allowTitle": {
+    "message": "Autoriser l'accès à votre serveur Inkling"
+  },
+  "allowText": {
+    "message": "L'extension a besoin de votre autorisation pour communiquer avec $HOST$.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "allowButton": {
+    "message": "Autoriser"
+  },
+  "permissionDenied": {
+    "message": "Sans cette autorisation, l'extension ne peut pas joindre votre serveur Inkling."
+  },
+  "errNetwork": {
+    "message": "Impossible de joindre $HOST$. Vérifiez l'adresse dans les réglages et votre connexion.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "errInvalidKey": {
+    "message": "La clé d'API n'a pas été acceptée. Vérifiez-la dans les réglages ou créez-en une nouvelle sur la page de votre compte Inkling."
+  },
+  "errExpiredKey": {
+    "message": "Cette clé d'API a expiré. Créez-en une nouvelle sur la page de votre compte Inkling."
+  },
+  "errKeyLimit": {
+    "message": "Cette clé a atteint sa limite quotidienne. Elle est réinitialisée à minuit UTC."
+  },
+  "errQuota": {
+    "message": "Votre quota quotidien est épuisé. Il est réinitialisé à minuit UTC."
+  },
+  "errRateLimit": {
+    "message": "Trop de requêtes. Attendez $COUNT$ secondes et réessayez.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "errRateLimitSoon": {
+    "message": "Trop de requêtes. Attendez un instant et réessayez."
+  },
+  "errTooLarge": {
+    "message": "Cette page contient trop de texte pour être résumée d'un coup. Sélectionnez la partie voulue et réessayez."
+  },
+  "errPaused": {
+    "message": "Inkling a suspendu les résumés pour aujourd'hui. Réessayez plus tard."
+  },
+  "errAi": {
+    "message": "Le résumé n'a pas pu être créé pour le moment. Réessayez dans un instant."
+  },
+  "errBadRequest": {
+    "message": "Inkling n'a pas accepté cette demande : $MESSAGE$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "errUnknown": {
+    "message": "Une erreur s'est produite (erreur $STATUS$).",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "Réglages d'Inkling"
+  },
+  "addressLabel": {
+    "message": "Adresse d'Inkling"
+  },
+  "addressHint": {
+    "message": "L'adresse web de votre serveur Inkling, par exemple https://api.example.com. Le http simple n'est autorisé que pour localhost."
+  },
+  "keyLabel": {
+    "message": "Clé d'API"
+  },
+  "keyHint": {
+    "message": "Créez-en une sur la page de votre compte Inkling. Elle est conservée dans ce navigateur uniquement et envoyée seulement à l'adresse ci-dessus."
+  },
+  "showKey": {
+    "message": "Afficher"
+  },
+  "hideKey": {
+    "message": "Masquer"
+  },
+  "defaultsTitle": {
+    "message": "Valeurs par défaut"
+  },
+  "languageLabel": {
+    "message": "Langue du résumé"
+  },
+  "saveButton": {
+    "message": "Enregistrer"
+  },
+  "saved": {
+    "message": "Réglages enregistrés."
+  },
+  "testButton": {
+    "message": "Tester la connexion"
+  },
+  "testOk": {
+    "message": "Connecté. Clé « $NAME$ » : $USED$ requêtes sur $LIMIT$ utilisées aujourd'hui.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "used": {
+        "content": "$2"
+      },
+      "limit": {
+        "content": "$3"
+      }
+    }
+  },
+  "testOkNoLimit": {
+    "message": "Connecté. Clé « $NAME$ » : $USED$ requêtes utilisées aujourd'hui.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "used": {
+        "content": "$2"
+      }
+    }
+  },
+  "errAddress": {
+    "message": "Saisissez une adresse valide commençant par https:// (http:// ne fonctionne que pour localhost)."
+  },
+  "errKeyFormat": {
+    "message": "Une clé d'API Inkling commence par ink_."
+  },
+  "privacyTitle": {
+    "message": "Ce qui est envoyé et où"
+  },
+  "privacyText": {
+    "message": "Le texte de la page (ou de votre sélection) est envoyé à l'adresse Inkling ci-dessus quand vous appuyez sur le bouton, et nulle part ailleurs. Rien n'est lu en arrière-plan et rien n'est envoyé tant que vous ne le demandez pas."
+  }
+}
