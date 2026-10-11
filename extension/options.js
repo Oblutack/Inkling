@@ -9,7 +9,9 @@ function option(value, text) {
 }
 
 function fillChoices(settings) {
-  const names = new Intl.DisplayNames([chrome.i18n.getUILanguage()], { type: "language" });
+  // The names of the languages are written in the language of the texts (not the browser's own, which may have no texts
+  // here and fall back to English: then the names would be in another language than everything beside them).
+  const names = new Intl.DisplayNames([t("localeCode")], { type: "language" });
   $("language").replaceChildren(
     ...LANGUAGES.map(([name, code]) => {
       let label = name;
