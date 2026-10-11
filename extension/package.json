@@ -1,0 +1,10 @@
+{
+  "name": "inkling-extension",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "The Inkling browser extension. It has no dependencies: the code runs as it is written. This file only tells Node how to run the tests.",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  }
+}
