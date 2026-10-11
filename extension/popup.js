@@ -16,6 +16,8 @@ let tab = null; // { id, title, url } of the page being read
 let page = null; // what readPage returned
 let markdown = "";
 let controller = null;
+// Opened from the right-click entry (background.js): the selection is summarized as soon as it has been read, once.
+let startWithSelection = new URLSearchParams(location.search).get("selection") === "1";
 
 function show(name) {
   for (const id of sections) $(id).hidden = id !== name;
@@ -86,16 +88,60 @@ async function showReady() {
   $("summarize-selection").hidden = selected === 0;
   $("summarize-page").classList.toggle("secondary", selected > 0); // with a selection offered, the page is the quieter choice
   show("ready");
+  if (selected && startWithSelection) {
+    startWithSelection = false;
+    await run(true);
+    return;
+  }
+  startWithSelection = false;
   (selected ? $("summarize-selection") : $("summarize-page")).focus();
+}
+
+// While the summary is being written it is drawn again as it grows, at most once for every frame.
+let drawing = false;
+function drawSoon() {
+  if (drawing) return;
+  drawing = true;
+  requestAnimationFrame(() => {
+    drawing = false;
+    renderMarkdown(markdown, $("summary"));
+  });
+}
+
+// The result view, either still being written (with a Stop button) or finished (with Copy and Summarize again).
+function showResult({ writing, note = "" }) {
+  show("result");
+  $("summary").setAttribute("aria-busy", String(writing));
+  $("writing-actions").hidden = !writing;
+  $("done-actions").hidden = writing;
+  $("result-note").textContent = writing ? t("writing") : note;
+  renderMarkdown(markdown, $("summary"));
 }
 
 async function run(useSelection) {
   showError("");
+  markdown = "";
   controller = new AbortController();
   show("working");
   $("working-text").textContent = t("working");
   const choices = { language: settings.language, wordCount: settings.wordCount, style: settings.style, save: settings.save };
-  const common = { baseUrl: normalizeBaseUrl(settings.baseUrl).url, apiKey: settings.apiKey.trim(), signal: controller.signal, ...choices };
+  let writing = false;
+  const common = {
+    baseUrl: normalizeBaseUrl(settings.baseUrl).url,
+    apiKey: settings.apiKey.trim(),
+    signal: controller.signal,
+    ...choices,
+    // the first words switch the screen to the summary, and it is drawn again as more come
+    onText: (soFar) => {
+      markdown = soFar;
+      if (!writing) {
+        writing = true;
+        showResult({ writing: true });
+      } else {
+        drawSoon();
+      }
+    },
+  };
   try {
     let result;
     if (useSelection) {
@@ -103,21 +149,25 @@ async function run(useSelection) {
     } else if (page.text.length < TOO_LITTLE_TEXT && /^https?:/i.test(page.url)) {
       result = await summarizeUrl({ ...common, url: page.url });
     } else if (page.text.trim()) {
-      result = await summarizeText({ ...common, text: page.title ? `${page.title}\n\n${page.text}` : page.text });
+      result = await summarizeText({ ...common, text: page.title ? [page.title, page.text].join("\n\n") : page.text });
     } else {
       throw new InklingError("no_text");
     }
     markdown = result.summary;
-    renderMarkdown(markdown, $("summary"));
     const notes = [];
     if (result.id) notes.push(t("savedNote"));
     if (result.quotaRemaining !== null) notes.push(t("quotaLeft", result.quotaRemaining));
-    $("result-note").textContent = notes.join(" ");
-    show("result");
+    showResult({ writing: false, note: notes.join(" ") });
     $("summary").focus();
   } catch (error) {
     if (error && error.name === "AbortError") {
-      await showReady();
+      if (writing && markdown.trim()) {
+        // stopped part of the way: what was written is kept, and can be copied
+        showResult({ writing: false, note: t("stoppedNote") });
+        $("summary").focus();
+      } else {
+        await showReady();
+      }
       return;
     }
     show("ready");
@@ -157,6 +207,7 @@ async function init() {
   $("summarize-page").addEventListener("click", () => run(false));
   $("summarize-selection").addEventListener("click", () => run(true));
   $("cancel").addEventListener("click", () => controller?.abort());
+  $("stop").addEventListener("click", () => controller?.abort());
   $("again").addEventListener("click", () => showReady());
   $("allow-button").addEventListener("click", async () => {
     const granted = await chrome.permissions.request({ origins: [permissionPattern(normalizeBaseUrl(settings.baseUrl).url)] });

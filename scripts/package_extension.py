@@ -43,6 +43,9 @@ def runtime_files() -> list[Path]:
 
 def firefox_manifest(manifest: dict) -> dict:
     result = {k: v for k, v in manifest.items() if k != "minimum_chrome_version"}
+    # Firefox runs a background page of scripts (an event page), not a service worker.
+    if "background" in result:
+        result["background"] = {"scripts": [result["background"]["service_worker"]], "type": "module"}
     result["browser_specific_settings"] = {
         "gecko": {
             "id": FIREFOX_ID,
