@@ -427,7 +427,7 @@ export const bs: Record<MessageKey, string> = {
   "form.photoHint": "Tekst na fotografiji se prvo čita, pa traje malo duže. Više fotografija postaje stranice jednog dokumenta, redoslijedom kako su prikazane.",
   "stage.scanning": "Čitanje teksta s fotografija...",
   "apiKeys.title": "API ključevi",
-  "apiKeys.intro": "Dozvolite vlastitim programima da sažimaju tekstove, web stranice i datoteke, uz vaš dnevni limit. Ništa se ne sprema u vašu biblioteku. Čuvajte ključeve u tajnosti i koristite ih samo sa servera, nikada na web stranici.",
+  "apiKeys.intro": "Dozvolite vlastitim programima i proširenju za preglednik da sažimaju tekstove, web stranice i datoteke, uz vaš dnevni limit. Ništa se ne sprema u vašu biblioteku osim ako poziv to ne zatraži. Čuvajte ključeve u tajnosti i koristite ih samo sa servera ili iz proširenja, nikada na web stranici.",
   "apiKeys.nameLabel": "Naziv ključa (neobavezno)",
   "apiKeys.nameHint": "Da razlikujete svoje ključeve, na primjer „noćni izvještaj“.",
   "apiKeys.create": "Napravi ključ",

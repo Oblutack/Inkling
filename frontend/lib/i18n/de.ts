@@ -427,7 +427,7 @@ export const de: Record<MessageKey, string> = {
   "form.photoHint": "Der Text auf einem Foto wird zuerst gelesen, das dauert etwas länger. Mehrere Fotos werden zu den Seiten eines Dokuments, in der angezeigten Reihenfolge.",
   "stage.scanning": "Der Text auf den Fotos wird gelesen...",
   "apiKeys.title": "API-Schlüssel",
-  "apiKeys.intro": "Lassen Sie Ihre eigenen Programme Texte, Webseiten und Dateien zusammenfassen, mit Ihrem Tageskontingent. Nichts wird in Ihrer Bibliothek gespeichert. Halten Sie Schlüssel geheim und verwenden Sie sie nur von einem Server aus, nie auf einer Webseite.",
+  "apiKeys.intro": "Lassen Sie Ihre eigenen Programme und die Browser-Erweiterung Texte, Webseiten und Dateien zusammenfassen, mit Ihrem Tageskontingent. Nichts wird in Ihrer Bibliothek gespeichert, außer ein Aufruf verlangt es. Halten Sie Schlüssel geheim und verwenden Sie sie nur von einem Server oder der Erweiterung aus, nie auf einer Webseite.",
   "apiKeys.nameLabel": "Name des Schlüssels (optional)",
   "apiKeys.nameHint": "Damit Sie Ihre Schlüssel unterscheiden können, zum Beispiel „Nachtbericht“.",
   "apiKeys.create": "Schlüssel erstellen",

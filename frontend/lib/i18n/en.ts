@@ -425,7 +425,7 @@ export const en = {
   "form.photoHint": "The text in a photo is read first, so this takes a little longer. Several photos become the pages of one document, in the order shown.",
   "stage.scanning": "Reading the text in the photos...",
   "apiKeys.title": "API keys",
-  "apiKeys.intro": "Let your own programs summarize text, web pages and files, using your daily allowance. Nothing is saved to your library. Keep keys secret and use them only from a server, never in a web page.",
+  "apiKeys.intro": "Let your own programs, and the browser extension, summarize text, web pages and files, using your daily allowance. Nothing is saved to your library unless a call asks for it. Keep keys secret and use them only from a server or the extension, never in a web page.",
   "apiKeys.nameLabel": "Key name (optional)",
   "apiKeys.nameHint": "So you can tell your keys apart, for example “nightly report”.",
   "apiKeys.create": "Create key",

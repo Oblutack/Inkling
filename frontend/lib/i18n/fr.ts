@@ -427,7 +427,7 @@ export const fr: Record<MessageKey, string> = {
   "form.photoHint": "Le texte d'une photo est d'abord lu, ce qui prend un peu plus de temps. Plusieurs photos deviennent les pages d'un seul document, dans l'ordre affiché.",
   "stage.scanning": "Lecture du texte des photos...",
   "apiKeys.title": "Clés d'API",
-  "apiKeys.intro": "Laissez vos propres programmes résumer des textes, des pages web et des fichiers, avec votre quota quotidien. Rien n'est enregistré dans votre bibliothèque. Gardez les clés secrètes et utilisez-les uniquement depuis un serveur, jamais dans une page web.",
+  "apiKeys.intro": "Laissez vos propres programmes, et l'extension de navigateur, résumer des textes, des pages web et des fichiers, avec votre quota quotidien. Rien n'est enregistré dans votre bibliothèque sauf si un appel le demande. Gardez les clés secrètes et utilisez-les uniquement depuis un serveur ou l'extension, jamais dans une page web.",
   "apiKeys.nameLabel": "Nom de la clé (facultatif)",
   "apiKeys.nameHint": "Pour distinguer vos clés, par exemple « rapport de nuit ».",
   "apiKeys.create": "Créer une clé",
