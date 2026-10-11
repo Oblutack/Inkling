@@ -441,6 +441,58 @@ def test_a_bottom_line_with_an_invented_number_is_replaced():
     assert "120" not in result["bottomLine"] and result["bottomLine"].startswith('Between "v1" and "v2"')
 
 
+def test_an_unusable_bottom_line_is_asked_for_once_more():
+    class SecondTime(Model):
+        bottom_lines = 0
+
+        async def __call__(self, prompt):
+            if "Write the bottom line" in prompt:
+                SecondTime.bottom_lines += 1
+                return "Payment now takes 120 days." if SecondTime.bottom_lines == 1 else "The payment window grew."
+            return await super().__call__(prompt)
+
+    model = SecondTime()
+    result = run(compare.compare_documents("v1", OLD, "v2", NEW, None, model))
+    assert result["bottomLine"] == "The payment window grew."
+    assert SecondTime.bottom_lines == 2
+
+
+def test_the_bottom_line_is_asked_for_only_twice_before_the_programs_own_is_used():
+    class Never(Model):
+        asked = 0
+
+        async def __call__(self, prompt):
+            if "Write the bottom line" in prompt:
+                Never.asked += 1
+                return "Payment now takes 120 days."
+            return await super().__call__(prompt)
+
+    result = run(compare.compare_documents("v1", OLD, "v2", NEW, None, Never()))
+    assert Never.asked == compare.BOTTOM_LINE_ATTEMPTS == 2
+    assert result["bottomLine"].startswith('Between "v1" and "v2"')
+
+
+def test_a_failing_bottom_line_is_not_asked_for_again():
+    class Fragile(Model):
+        asked = 0
+
+        async def __call__(self, prompt):
+            if "Write the bottom line" in prompt:
+                Fragile.asked += 1
+                raise RuntimeError("down")
+            return await super().__call__(prompt)
+
+    run(compare.compare_documents("v1", OLD, "v2", NEW, None, Fragile()))
+    assert Fragile.asked == 1
+
+
+def test_the_prompt_says_that_a_right_given_or_taken_away_is_high():
+    prompt = compare.explain_prompt([], "a", "b", None)
+    flat = " ".join(prompt.split())
+    assert "granted, taken away or limited" in flat and "is always HIGH" in flat
+    assert "how many people or things" in flat
+
+
 def test_a_failing_bottom_line_does_not_fail_the_comparison():
     class Fragile(Model):
         async def __call__(self, prompt):
