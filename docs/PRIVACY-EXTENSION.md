@@ -18,7 +18,7 @@ There is none.
 
 ## What is read, and when
 
-Nothing is read in the background. The extension has no script that runs on the pages you visit. It reads a page only at the moment
+Nothing is read in the background. The extension has no script that runs on the pages you visit; its one background file only adds the right-click entry ("Summarize the selection with Inkling") and, when you choose it, opens a small window that works exactly like the toolbar button: it reads the selection at that moment, because you asked, and sends it as described above. The extension reads a page only at the moment
 you press the button on it (the `activeTab` permission lasts for that page until you leave it), and it reads the text, the title and
 the address of that page, and what is selected on it. It does not read cookies, saved passwords or your other tabs, and it takes only what the page shows as text.
 
@@ -36,6 +36,7 @@ your library, as it does for any summary you save on the website. Otherwise the 
 | Permission | Why |
 | --- | --- |
 | `activeTab` and `scripting` | To read the page you pressed the button on, and only that page. |
+| `contextMenus` | To add the right-click entry for selected text. |
 | `storage` | To keep your settings in this browser. |
 | One server address, asked for when you save the settings | To send the request to your Inkling server. The browser asks you; nothing else is allowed. |
 

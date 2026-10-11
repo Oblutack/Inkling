@@ -10,7 +10,8 @@ It has **no build step and no dependencies**: the code in this folder is what th
 - **Summarize this page.** The extension reads the page's text in your browser (the article, not the menus, the footer or what
   is hidden) and sends it to your Inkling server. A page with no text of its own, such as a PDF in the browser's viewer, is handed to
   the server by its address instead.
-- **Summarize the selection.** Select some text first and the button changes to summarize just that.
+- **Summarize the selection.** Select some text first and the button changes to summarize just that. Or right-click the selection and choose **Summarize the selection with Inkling**: a small window opens and goes straight to the summary.
+- **Watch it being written.** The summary appears as it is written (the API's streaming), with a **Stop** button that keeps what was written so far. A server that answers all at once works as well.
 - **Your choices.** Length (about 100 to 500 words), style (standard, bullet points, brief, simple language, key takeaways),
   language (the 15 that Inkling writes in), and whether to keep the result in your library. They are remembered.
 - **In your language.** The popup and the settings page come in English, Spanish, German, French and Bosnian, following the
@@ -45,7 +46,7 @@ python scripts/package_extension.py --firefox --unpacked dist/firefox
 
 It needs **Firefox 140 or newer** (140 is the extended-support release). Firefox for Android is declared as 142 or newer; it has not been tried.
 
-What differs from Chrome, and is handled: the add-on has an id (`inkling-extension@oblutack.github.io`, set in `scripts/package_extension.py`;
+What differs from Chrome, and is handled: Firefox runs the background file as an event page of scripts instead of a service worker (the Firefox manifest says so), the add-on has an id (`inkling-extension@oblutack.github.io`, set in `scripts/package_extension.py`;
 change it if you publish under another name), Firefox sends no `Origin` on a plain `GET` (only on the `POST`, where it is `moz-extension://...`,
 which the API allows for the `/v1` routes just as it allows `chrome-extension://...`), and a match pattern for a tab has no port.
 
@@ -54,11 +55,12 @@ which the API allows for the `/v1` routes just as it allows `chrome-extension://
 | | |
 | --- | --- |
 | `activeTab` | Read the page you press the button on, and only then. Nothing is read in the background and no page is read until you ask. |
+| `contextMenus` | Add the right-click entry for selected text. |
 | `scripting` | Run the small reader function in that page. |
 | `storage` | Keep your settings in this browser (never synced to other devices). |
 | One server | When you save the settings the browser asks to let the extension talk to **the address you typed**, and to nothing else. |
 
-There is no background script, no content script that runs on every page, no analytics and no remote code. The key is sent only to
+The only background code is `background.js`, which adds the right-click entry and, when it is chosen, opens the popup's page in a small window: it reads no page, holds no key and makes no network request (a test checks that the file contains none of those). There is no content script that runs on every page, no analytics and no remote code. The key is sent only to
 the address in the settings, as an `Authorization` header, and never together with your website cookie.
 See [`docs/PRIVACY-EXTENSION.md`](../docs/PRIVACY-EXTENSION.md).
 
@@ -72,12 +74,14 @@ browser extension through (and only for these `/v1` routes, and only with a key)
 ## Layout
 
 ```text
-manifest.json        Manifest V3: permissions, popup, settings page, icons
+manifest.json        Manifest V3: permissions, popup, settings page, icons, the background file
+background.js        The right-click entry (adds it, opens the popup's page aimed at the tab)
 popup.html/js/css    The popup: reads the page, asks for a summary, shows it
 options.html/js/css  The settings page: address, key, defaults, test
 ui.css               Colours and form styles shared by both (light and dark)
 lib/settings.js      What is stored, and the checks on it (https only, except for this machine)
-lib/api.js           The calls to the Inkling API and what each failure is called
+lib/api.js           The calls to the Inkling API (streamed, with a fallback to one reply) and what each failure is called
+lib/stream.js        Reads the server-sent events of a streamed summary
 lib/page.js          The function that runs inside the page to read it
 lib/markdown.js      Draws the summary with DOM elements, never as HTML
 lib/i18n.js          Words from _locales, and the sentence for each failure
