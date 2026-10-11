@@ -161,7 +161,7 @@ jobs:
           # without opening the log.
           if ! python extension/test/firefox/run_firefox_test.py > "$RUNNER_TEMP/firefox-test.log" 2>&1; then
             cat "$RUNNER_TEMP/firefox-test.log"
-            detail=$(tail -c 3500 "$RUNNER_TEMP/firefox-test.log" | sed -e 's/%/%25/g' -e 's//%0D/g' | awk 'BEGIN{ORS="%0A"} {print}')
+            detail=$(tail -c 3500 "$RUNNER_TEMP/firefox-test.log" | sed -e 's/%/%25/g' | awk 'BEGIN{ORS="%0A"} {print}')
             echo "::error title=The Firefox test failed::$detail"
             exit 1
           fi
