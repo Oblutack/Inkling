@@ -66,6 +66,7 @@ Inkling turns PDFs, Word and PowerPoint files, photos of pages, web pages, recor
 ### Accounts and privacy
 - Email/password (bcrypt) and **Google sign-in**, with email confirmation and password reset.
 - **Revocable server-side sessions** in `httpOnly` cookies; a device list with remote sign-out; "sign out everywhere".
+- **Two-step sign-in with an authenticator app** (Google Authenticator, 1Password, Authy, Aegis...). Switch it on from the account page by scanning a QR code and confirming with a code; after that a correct password is not enough, a six-digit code is asked for as well (for Google sign-in too). Ten single-use recovery codes are shown once, for a lost phone. Switching it off, or making new recovery codes, asks for the password and a code again. Off unless the server has a `TOTP_ENCRYPTION_KEY`.
 - **Your data is yours:** one-click JSON export and permanent account deletion (hard delete, re-authenticated).
 - Saved history with cursor pagination, PDF export, and daily usage meters.
 - **An API for your own programs.** Make a key on the account page (up to five; shown once, only a hash is kept, revocable at once) and call `/v1` with `Authorization: Bearer ink_...` to summarize text, web pages, documents, photos and recordings. A key can only use the `/v1` routes (summarize, compare, extract and its own usage), so a leaked one can neither read your library nor touch your account; nothing it does is saved unless the call asks for it. It draws on your daily allowance and is held by the same rate limits and spending guard as the website. A key can be given an **expiry date** and a **daily limit of its own** when it is made, the account page shows what each key has done today and in all, and `?save=true` keeps a result in your library (the reply then has its `id`). Besides summarizing, a program can **compare** two texts and **extract fields** from one. See *The API for programs* below and `docs/openapi.yaml`.
@@ -251,6 +252,9 @@ data: {"type":"done","filename":"report.pdf"}
 | `POST` | `/auth/logout`, `/auth/logout-all` | - / session | End this session / every session. |
 | `GET`, `DELETE` | `/auth/sessions`, `/auth/sessions/:id` | session | List signed-in devices, sign one out. |
 | `POST` | `/auth/change-password`, `/auth/resend-verification` | session | Change password (signs out other devices); resend confirmation. |
+| `POST` | `/auth/two-factor` | challenge | The second step of signing in: `{challenge, code}` or `{challenge, recoveryCode}`. A correct password (or Google sign-in) on an account with two-step on returns `{twoFactorRequired: true, challenge}` instead of a session; a challenge lasts five minutes and puts up with five wrong codes. |
+| `GET` | `/account/two-factor` | session | Whether two-step is available and on, and how many recovery codes are left. |
+| `POST` | `/account/two-factor/setup`, `/enable`, `/disable`, `/recovery-codes` | session | Set up (`{password}`, returns the secret and the `otpauth://` address for the QR code), confirm (`{code}`, returns the recovery codes once), switch off (`{password, code}` or `{password, recoveryCode}`), make new recovery codes (`{password, code}`). |
 | `GET` | `/usage` | session | Today's usage against the daily quotas. |
 | `GET` | `/account/export` | session | Download all of your data as JSON. |
 | `DELETE` | `/account` | session | Permanently delete the account and its data. |
@@ -311,6 +315,7 @@ Backend settings live in the root `.env` (see [`.env.example`](.env.example)); f
 | `MAIL_PROVIDER` | `log` | `log`, `brevo` or `resend`. See [Email](#email). |
 | `MAIL_FROM`, `BREVO_API_KEY`, `RESEND_API_KEY` | - | Sender and provider credentials. |
 | `REQUIRE_EMAIL_VERIFICATION` | `false` | Require a confirmed email before summarizing. |
+| `TOTP_ENCRYPTION_KEY` | empty | Turns on two-step sign-in: 32 random bytes in base64 (`openssl rand -base64 32`) that encrypt the authenticator secrets in the database. Keep it with the database password and do not change it. Empty: the option is not offered. |
 | `QUOTA_SUMMARIES_PER_DAY`, `QUOTA_CHAT_PER_DAY` | `50`, `200` | Daily limits per signed-in user (UTC day, `0` = unlimited). |
 | `ANON_SUMMARIES_PER_DAY`, `AI_REQUESTS_PER_DAY` | `10`, `5000` | The spending guard: summaries one visitor without an account may make a day, and all the AI work the whole site may start a day (`0` = unlimited). When the site's budget is used up, AI work pauses until midnight UTC while everything else keeps working. |
 | `IP_HASH_KEY` | the AI service token | Secret that keys the hash of a visitor's address. Addresses are never stored, only this hash, and only for a few days. |
@@ -439,6 +444,7 @@ What is covered, beyond the happy paths: concurrency (a quota of 3 admits exactl
 | Area | Measure |
 | --- | --- |
 | Sessions | Random 256-bit tokens in `httpOnly` cookies, only a hash stored; 30-day sliding expiry with a 90-day hard limit; revoked on logout, password change, reset and account deletion. |
+| Two-step sign-in | An authenticator app (TOTP, RFC 6238, checked against the standard's own test vectors) after the password. A code works once: the last accepted 30-second step is recorded in the same statement that checks it, so two requests carrying one code cannot both pass. The app's secret is stored encrypted (AES-256-GCM) with a key that is not in the database; recovery codes are stored as hashes and each works once, even without the key. A sign-in that has the password but not the code is a challenge, not a session: five minutes, five wrong codes, single use. Switching it off, or making new recovery codes, asks for the password and a code again. |
 | Passwords | bcrypt at cost 12 (older hashes are upgraded at the next login), 8-72 characters, a list of about 200 common passwords plus pattern checks (repeats, runs like `87654321` or `asdfghjk`, the email name), equal-time comparison for unknown users, per-account login throttle. |
 | Accounts | Signing up says the same thing whether or not the address already has an account (the owner is told by email, at most once an hour), so signup cannot be used to check lists of emails. |
 | CSRF | `Origin` check on every state-changing request, strict credentialed CORS allowlist, `SameSite` cookies. A key has no place in a web page, so pages of other sites are refused on the key routes too; only a browser extension (Chrome's or Firefox's: its origin is set by the browser and a page cannot forge it) may call `/v1` with a key. |
