@@ -86,6 +86,8 @@ services:
         sync: false # see the guide: without it every visitor looks like Render's proxy and shares the IP-based limits
       - key: TURNSTILE_SECRET
         sync: false # optional
+      - key: TOTP_ENCRYPTION_KEY
+        sync: false # optional: turns on two-step sign-in (an authenticator app). `openssl rand -base64 32`; keep it, do not change it
       - key: LOG_FORMAT
         value: json
       # Original PDFs live in the database, which is small on free plans: keep the per-user cap low there.

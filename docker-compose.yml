@@ -74,6 +74,8 @@ services:
       - BREVO_API_KEY=${BREVO_API_KEY:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - REQUIRE_EMAIL_VERIFICATION=${REQUIRE_EMAIL_VERIFICATION:-false}
+      # Two-step sign-in: the key that protects authenticator secrets in the database (openssl rand -base64 32). Empty: off.
+      - TOTP_ENCRYPTION_KEY=${TOTP_ENCRYPTION_KEY:-}
       # Abuse protection. Empty TURNSTILE_SECRET turns the human check off.
       - TURNSTILE_SECRET=${TURNSTILE_SECRET:-}
       - QUOTA_SUMMARIES_PER_DAY=${QUOTA_SUMMARIES_PER_DAY:-50}
