@@ -156,7 +156,16 @@ jobs:
       - name: Load it into a real Firefox and use it
         run: |
           pip install selenium==4.51.0
-          python extension/test/firefox/run_firefox_test.py
+          firefox --version || true
+          # The output is kept, and when the test fails its end is also written as an annotation of the run, where it can be read
+          # without opening the log.
+          if ! python extension/test/firefox/run_firefox_test.py > "$RUNNER_TEMP/firefox-test.log" 2>&1; then
+            cat "$RUNNER_TEMP/firefox-test.log"
+            detail=$(tail -c 3500 "$RUNNER_TEMP/firefox-test.log" | sed -e 's/%/%25/g' -e 's//%0D/g' | awk 'BEGIN{ORS="%0A"} {print}')
+            echo "::error title=The Firefox test failed::$detail"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/firefox-test.log"
       - uses: actions/upload-artifact@v7
         with:
           name: inkling-extension

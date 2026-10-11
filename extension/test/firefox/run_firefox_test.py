@@ -151,6 +151,7 @@ def main() -> int:
     try:
         package = build_extension(work / "extension", "127.0.0.1")
         driver = start_firefox()
+        print("Firefox", driver.capabilities.get("browserVersion"), "on", driver.capabilities.get("platformName"))
         # By path, through WebDriver BiDi: Firefox opens the folder itself. (Selenium's install_addon sends the add-on as
         # a file that Firefox keeps open, and on Windows the driver then cannot delete it.)
         driver.webextension.install(path=str(package))
