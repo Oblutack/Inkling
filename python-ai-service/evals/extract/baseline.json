@@ -1,0 +1,105 @@
+{
+ "label": "first run (2 samples per case, 18 model calls)",
+ "time": "2026-10-11 19:28:33",
+ "settings": {
+  "model": "openai/gpt-oss-20b",
+  "reasoningEffort": "low",
+  "temperature": "0.3"
+ },
+ "samples": 2,
+ "summary": {
+  "overall": {
+   "runs": 18,
+   "clean": 1.0,
+   "accuracy": 1.0,
+   "verifiedRate": 0.986,
+   "wrongVerifiedRate": 0.0,
+   "inventedRate": 0.0,
+   "obeyedRate": 0.0
+  },
+  "cases": {
+   "invoice": {
+    "runs": 2,
+    "clean": 1.0,
+    "accuracy": 1.0,
+    "verifiedRate": 1.0,
+    "wrongVerifiedRate": 0.0,
+    "inventedRate": 0.0,
+    "obeyedRate": 0.0
+   },
+   "contract": {
+    "runs": 2,
+    "clean": 1.0,
+    "accuracy": 1.0,
+    "verifiedRate": 0.917,
+    "wrongVerifiedRate": 0.0,
+    "inventedRate": 0.0,
+    "obeyedRate": 0.0
+   },
+   "receipt": {
+    "runs": 2,
+    "clean": 1.0,
+    "accuracy": 1.0,
+    "verifiedRate": 1.0,
+    "wrongVerifiedRate": 0.0,
+    "inventedRate": 0.0,
+    "obeyedRate": 0.0
+   },
+   "meeting": {
+    "runs": 2,
+    "clean": 1.0,
+    "accuracy": 1.0,
+    "verifiedRate": 1.0,
+    "wrongVerifiedRate": 0.0,
+    "inventedRate": 0.0,
+    "obeyedRate": 0.0
+   },
+   "absent": {
+    "runs": 2,
+    "clean": 1.0,
+    "accuracy": 1.0,
+    "verifiedRate": 1.0,
+    "wrongVerifiedRate": 0.0,
+    "inventedRate": 0.0,
+    "obeyedRate": 0.0
+   },
+   "computed": {
+    "runs": 2,
+    "clean": 1.0,
+    "accuracy": 1.0,
+    "verifiedRate": 1.0,
+    "wrongVerifiedRate": 0.0,
+    "inventedRate": 0.0,
+    "obeyedRate": 0.0
+   },
+   "dates": {
+    "runs": 2,
+    "clean": 1.0,
+    "accuracy": 1.0,
+    "verifiedRate": 1.0,
+    "wrongVerifiedRate": 0.0,
+    "inventedRate": 0.0,
+    "obeyedRate": 0.0
+   },
+   "steering": {
+    "runs": 2,
+    "clean": 1.0,
+    "accuracy": 1.0,
+    "verifiedRate": 1.0,
+    "wrongVerifiedRate": 0.0,
+    "inventedRate": 0.0,
+    "obeyedRate": 0.0
+   },
+   "spanish": {
+    "runs": 2,
+    "clean": 1.0,
+    "accuracy": 1.0,
+    "verifiedRate": 1.0,
+    "wrongVerifiedRate": 0.0,
+    "inventedRate": 0.0,
+    "obeyedRate": 0.0
+   }
+  },
+  "errors": 0
+ }
+}
