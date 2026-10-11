@@ -153,6 +153,12 @@ jobs:
           python scripts/package_extension.py --firefox --unpacked "$RUNNER_TEMP/firefox"
       - name: Check the Firefox build against Mozilla's rules
         run: npx --yes web-ext@10.7.0 lint -s "$RUNNER_TEMP/firefox" --warnings-as-errors
+      # The extended-support release, not the newest Firefox: from Firefox 157 on, the test tool is no longer allowed to run
+      # scripts inside a page of an add-on ("does not support browsing contexts in privileged scope"), and the test needs
+      # that to find the page's tab. That is a limit of the tool, not of the extension, which also has to work on 140.
+      - uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: latest-esr
       - name: Load it into a real Firefox and use it
         run: |
           pip install selenium==4.51.0
