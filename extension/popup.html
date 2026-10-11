@@ -59,7 +59,10 @@
         <h2 id="result-heading" data-i18n="resultLabel"></h2>
         <div id="summary" class="summary" tabindex="-1" aria-labelledby="result-heading"></div>
         <p id="result-note" class="muted" role="status"></p>
-        <div class="actions">
+        <div class="actions" id="writing-actions" hidden>
+          <button type="button" id="stop" class="secondary" data-i18n="stop"></button>
+        </div>
+        <div class="actions" id="done-actions">
           <button type="button" id="copy" data-i18n="copy"></button>
           <button type="button" id="again" class="secondary" data-i18n="again"></button>
         </div>

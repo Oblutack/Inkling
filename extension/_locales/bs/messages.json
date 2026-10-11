@@ -26,6 +26,9 @@
   "untitledPage": {
     "message": "Stranica bez naslova"
   },
+  "menuSummarizeSelection": {
+    "message": "Sažmi označeno pomoću Inklinga"
+  },
   "summarizePage": {
     "message": "Sažmi ovu stranicu"
   },
@@ -75,6 +78,15 @@
   },
   "keepLabel": {
     "message": "Zadrži u mojoj Inkling biblioteci"
+  },
+  "writing": {
+    "message": "Pisanje sažetka…"
+  },
+  "stop": {
+    "message": "Zaustavi"
+  },
+  "stoppedNote": {
+    "message": "Zaustavljeno. Ovo je ono što je do sada napisano."
   },
   "working": {
     "message": "Čitanje i sažimanje…"

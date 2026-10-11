@@ -1,4 +1,5 @@
 // The calls to the Inkling API for programs (docs/openapi.yaml). Nothing here touches the page or the screen.
+import { readEvents } from "./stream.js";
 
 // Keep in step with the API: the most text it takes in one request (maxLength of /v1/summarize-text).
 export const MAX_TEXT_CHARS = 200_000;
@@ -37,7 +38,8 @@ export function errorFromResponse(status, body, retryAfterHeader) {
   return new InklingError("unknown", { status, detail });
 }
 
-async function request({ baseUrl, apiKey, path, query = {}, body, signal, fetchImpl = fetch }) {
+// Sends a request and gives back the response, or throws what went wrong as an InklingError.
+async function send({ baseUrl, apiKey, path, query = {}, body, signal, fetchImpl = fetch }) {
   const url = new URL(baseUrl + path);
   for (const [name, value] of Object.entries(query)) {
     if (value !== undefined && value !== null && value !== "") url.searchParams.set(name, String(value));
@@ -59,13 +61,26 @@ async function request({ baseUrl, apiKey, path, query = {}, body, signal, fetchI
     if (error && error.name === "AbortError") throw error;
     throw new InklingError("network");
   }
+  if (!response.ok) {
+    let json = null;
+    try {
+      json = await response.json();
+    } catch {
+      // not JSON: handled by the status alone
+    }
+    throw errorFromResponse(response.status, json, response.headers.get("Retry-After"));
+  }
+  return response;
+}
+
+async function request(options) {
+  const response = await send(options);
   let json = null;
   try {
     json = await response.json();
   } catch {
-    // not JSON: handled below by status
+    // not JSON
   }
-  if (!response.ok) throw errorFromResponse(response.status, json, response.headers.get("Retry-After"));
   return { json, response };
 }
 
@@ -86,17 +101,58 @@ function asSummary({ json, response }) {
 
 // The options a summary is made with: { language, wordCount, style, save }.
 function options({ language, wordCount, style, save }) {
-  return { language, wordCount, style, save: save ? "true" : undefined };
+  return { language, wordCount, style, save: save ? "true" : undefined, stream: "true" };
 }
 
-export async function summarizeText({ baseUrl, apiKey, text, signal, fetchImpl, ...choices }) {
+// Asks for a summary as it is written. `onText(summaryWrittenSoFar)` is called as it grows. A server that answers with the
+// whole summary at once (an older one, or a proxy in the way that does not stream) works as well, just without the growing.
+async function summarize({ baseUrl, apiKey, path, body, signal, fetchImpl, onText, ...choices }) {
+  const response = await send({ baseUrl, apiKey, signal, fetchImpl, path, query: options(choices), body });
+  if (!(response.headers.get("Content-Type") ?? "").includes("text/event-stream")) {
+    let json = null;
+    try {
+      json = await response.json();
+    } catch {
+      // not JSON: asSummary reports it
+    }
+    return asSummary({ json, response });
+  }
+
+  let summary = "";
+  let id = null;
+  let filename = "";
+  let finished = false;
+  let failure = null;
+  try {
+    await readEvents(response, (event) => {
+      if (event.type === "delta" && typeof event.text === "string") {
+        summary += event.text;
+        onText?.(summary);
+      } else if (event.type === "done") {
+        finished = true;
+        if (Number.isInteger(event.id)) id = event.id;
+        if (typeof event.filename === "string") filename = event.filename;
+      } else if (event.type === "error") {
+        failure = errorFromResponse(Number(event.status) || 502, { error: event.message });
+      }
+    });
+  } catch (error) {
+    if (error && error.name === "AbortError") throw Object.assign(error, { partial: summary });
+    throw new InklingError("network");
+  }
+  if (failure) throw failure;
+  if (!finished || !summary.trim()) throw new InklingError("ai_failed", { status: response.status });
+  return { summary, filename, id, quotaRemaining: number(response.headers, "X-Quota-Remaining") };
+}
+
+export function summarizeText({ text, ...rest }) {
   const clipped = text.length > MAX_TEXT_CHARS ? text.slice(0, MAX_TEXT_CHARS) : text;
-  return asSummary(await request({ baseUrl, apiKey, signal, fetchImpl, path: "/v1/summarize-text", query: options(choices), body: { text: clipped } }));
+  return summarize({ ...rest, path: "/v1/summarize-text", body: { text: clipped } });
 }
 
 // For a page whose text cannot be read in the browser (a PDF in the browser's own viewer): the server reads the address.
-export async function summarizeUrl({ baseUrl, apiKey, url, signal, fetchImpl, ...choices }) {
-  return asSummary(await request({ baseUrl, apiKey, signal, fetchImpl, path: "/v1/summarize-url", query: options(choices), body: { url } }));
+export function summarizeUrl({ url, ...rest }) {
+  return summarize({ ...rest, path: "/v1/summarize-url", body: { url } });
 }
 
 // What the key is and what it has done today (does not count as a request).

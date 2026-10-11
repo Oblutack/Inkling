@@ -26,6 +26,9 @@
   "untitledPage": {
     "message": "Untitled page"
   },
+  "menuSummarizeSelection": {
+    "message": "Summarize the selection with Inkling"
+  },
   "summarizePage": {
     "message": "Summarize this page"
   },
@@ -75,6 +78,15 @@
   },
   "keepLabel": {
     "message": "Keep it in my Inkling library"
+  },
+  "writing": {
+    "message": "Writing the summary…"
+  },
+  "stop": {
+    "message": "Stop"
+  },
+  "stoppedNote": {
+    "message": "Stopped. This is what was written so far."
   },
   "working": {
     "message": "Reading and summarizing…"

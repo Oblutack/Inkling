@@ -26,6 +26,9 @@
   "untitledPage": {
     "message": "Página sin título"
   },
+  "menuSummarizeSelection": {
+    "message": "Resumir la selección con Inkling"
+  },
   "summarizePage": {
     "message": "Resumir esta página"
   },
@@ -75,6 +78,15 @@
   },
   "keepLabel": {
     "message": "Guardarlo en mi biblioteca de Inkling"
+  },
+  "writing": {
+    "message": "Escribiendo el resumen…"
+  },
+  "stop": {
+    "message": "Parar"
+  },
+  "stoppedNote": {
+    "message": "Detenido. Esto es lo que se había escrito hasta ahora."
   },
   "working": {
     "message": "Leyendo y resumiendo…"
