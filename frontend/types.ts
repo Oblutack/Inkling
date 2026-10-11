@@ -99,6 +99,9 @@ export interface User {
   hasPassword: boolean;
   // Standing preferences added to every summary ("focus on costs and deadlines").
   customInstructions: string;
+  // Whether signing in needs a code from an authenticator app too, and whether this server can offer that at all.
+  twoFactorEnabled: boolean;
+  twoFactorAvailable: boolean;
 }
 
 // A flashcard, and a multiple-choice question of a quiz made from a document.

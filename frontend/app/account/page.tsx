@@ -8,6 +8,7 @@ import { DangerButton, ErrorText, Field, SecondaryButton, SuccessText } from "..
 import { API_URL, apiError } from "../../lib/api";
 import type { SessionInfo, Usage } from "../../types";
 import ApiKeys from "../../components/ApiKeys";
+import TwoFactor from "../../components/TwoFactor";
 import { useT } from "../../components/I18nProvider";
 import type { MessageKey, Params } from "../../lib/i18n";
 
@@ -308,6 +309,10 @@ export default function AccountPage() {
             .
           </p>
         )}
+      </Section>
+
+      <Section title={t("twoFactor.title")}>
+        <TwoFactor />
       </Section>
 
       <Section title={t("account.devices")}>

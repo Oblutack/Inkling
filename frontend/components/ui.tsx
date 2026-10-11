@@ -14,6 +14,7 @@ interface FieldProps {
   minLength?: number;
   maxLength?: number;
   hint?: string;
+  inputMode?: "numeric" | "text";
 }
 
 export function Field({
@@ -27,6 +28,7 @@ export function Field({
   minLength,
   maxLength,
   hint,
+  inputMode,
 }: FieldProps) {
   return (
     <div className="w-full">
@@ -43,6 +45,7 @@ export function Field({
         required={required}
         minLength={minLength}
         maxLength={maxLength}
+        inputMode={inputMode}
         aria-describedby={hint ? `${id}-hint` : undefined}
       />
       {hint && (

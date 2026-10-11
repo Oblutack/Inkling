@@ -31,6 +31,7 @@ const CREDENTIAL_ENDPOINTS = [
   "/login",
   "/signup",
   "/auth/google",
+  "/auth/two-factor",
   "/auth/logout",
   "/auth/me",
   "/auth/forgot-password",
