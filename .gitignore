@@ -35,3 +35,5 @@ python-ai-service/evals/summary/results/
 
 # Built packages
 dist/
+python-ai-service/evals/compare/results/
+python-ai-service/evals/extract/results/
