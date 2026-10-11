@@ -74,7 +74,8 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 	origins := middleware.AllowedOrigins()
 	config := cors.DefaultConfig()
 	config.AllowOrigins = origins
-	config.AllowCredentials = true // the session cookie; only sent to the explicit origins above
+	config.AllowCredentials = true                                           // the session cookie; only sent to the explicit origins above
+	config.AllowOriginWithContextFunc = middleware.ExtensionMayCallKeyRoutes // browser extensions, for the routes that take a key
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Authorization", middleware.TurnstileHeader}
 	config.ExposeHeaders = []string{controllers.NextCursorHeader, middleware.RequestIDHeader, "X-Quota-Limit", "X-Quota-Remaining", "Retry-After"}

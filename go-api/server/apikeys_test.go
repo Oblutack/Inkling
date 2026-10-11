@@ -415,6 +415,39 @@ func TestABrowserFromAnotherSiteCannotUseAKey(t *testing.T) {
 	}
 }
 
+func TestABrowserExtensionMayUseAKeyButOnlyForTheKeyRoutes(t *testing.T) {
+	a := newApp(t)
+	cl, _ := a.newUser()
+	_, key := makeKey(t, cl, "extension")
+	extension := "chrome-extension://abcdefghijklmnopabcdefghijklmnop"
+
+	for _, origin := range []string{extension, "moz-extension://1234-5678"} {
+		if r := a.call(http.MethodPost, "/v1/summarize-text", key, textBody(), "Origin", origin); r.Status != http.StatusOK {
+			t.Errorf("%s with a key: %d %s", origin, r.Status, r.Body)
+		}
+	}
+	// it still needs the key itself ...
+	if r := a.call(http.MethodPost, "/v1/summarize-text", "", textBody(), "Origin", extension); r.Status != http.StatusForbidden {
+		t.Errorf("an extension without a key: %d", r.Status)
+	}
+	if r := a.call(http.MethodPost, "/v1/summarize-text", "ink_notarealkey", textBody(), "Origin", extension); r.Status != http.StatusUnauthorized {
+		t.Errorf("an extension with a wrong key: %d", r.Status)
+	}
+	// ... the other routes are for the website only ...
+	if r := a.call(http.MethodPost, "/account/api-keys", key, map[string]string{"name": "x"}, "Origin", extension); r.Status != http.StatusForbidden {
+		t.Errorf("an extension on an account route: %d %s", r.Status, r.Body)
+	}
+	if r := cl.req(http.MethodPost, "/summarize-text", textBody(), "Origin", extension); r.Status != http.StatusForbidden {
+		t.Errorf("an extension with the website's cookie: %d %s", r.Status, r.Body)
+	}
+	// ... and an address that only looks like an extension is another site
+	for _, origin := range []string{"https://chrome-extension.evil.example", "http://chrome-extension://x", "https://evil.example"} {
+		if r := a.call(http.MethodPost, "/v1/summarize-text", key, textBody(), "Origin", origin); r.Status != http.StatusForbidden {
+			t.Errorf("%s: %d", origin, r.Status)
+		}
+	}
+}
+
 func TestKeysNeedAVerifiedEmailWhenThatIsRequired(t *testing.T) {
 	a := newApp(t)
 	cl, _ := a.newUser()

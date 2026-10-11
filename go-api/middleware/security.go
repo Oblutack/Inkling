@@ -51,12 +51,28 @@ func OriginCheck(allowed []string) gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if origin := c.GetHeader("Origin"); origin != "" && !set[origin] {
+		if origin := c.GetHeader("Origin"); origin != "" && !set[origin] && !extensionCallingWithKey(c, origin) {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Request blocked: unexpected origin."})
 			return
 		}
 		c.Next()
 	}
+}
+
+// ExtensionMayCallKeyRoutes is true for a request to the API for programs (/v1) from a browser extension. An extension
+// is something the person installed themselves and keeps its key to itself, and a web page cannot pretend to be one:
+// the browser sets the extension's origin, and no page can change it. Pages of other sites stay blocked, because a
+// key has no place in a web page. (It is the browser's CORS check, and then OriginCheck, that this is allowed through;
+// the key itself is still required.)
+func ExtensionMayCallKeyRoutes(c *gin.Context, origin string) bool {
+	if !strings.HasPrefix(origin, "chrome-extension://") && !strings.HasPrefix(origin, "moz-extension://") {
+		return false
+	}
+	return c.Request.URL.Path == "/v1" || strings.HasPrefix(c.Request.URL.Path, "/v1/")
+}
+
+func extensionCallingWithKey(c *gin.Context, origin string) bool {
+	return ExtensionMayCallKeyRoutes(c, origin) && strings.HasPrefix(c.GetHeader("Authorization"), "Bearer ")
 }
 
 // SecurityHeaders sets defensive headers on every API response. The API only ever returns JSON or
