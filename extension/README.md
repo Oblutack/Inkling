@@ -113,8 +113,11 @@ python extension/test/firefox/run_firefox_test.py    # needs Firefox; Selenium f
 npx web-ext lint -s dist/firefox                     # Mozilla's own rules for add-ons (build dist/firefox first)
 ```
 
-CI runs both on every push. (Selenium installs the add-on through WebDriver BiDi, by path: its older `install_addon` hands Firefox a file
-that Firefox keeps open, which Windows then will not let the driver delete.)
+CI runs both on every push. Two things about driving Firefox that are not obvious: Selenium installs the add-on through WebDriver BiDi, by
+path (its older `install_addon` hands Firefox a file that Firefox keeps open, which Windows then will not let the driver delete), and newer
+Firefox no longer lets WebDriver navigate to a page of an add-on at all (`Navigation to "moz-extension://..." is not allowed in this
+context`), so the test opens the settings page and the popup the way a link would, with `window.open` from an ordinary page. For that, the
+test's copy of the manifest lists those two pages as web-accessible for localhost only; the real manifest does not.
 
 ## Packaging and publishing
 
