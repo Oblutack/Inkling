@@ -12,7 +12,13 @@ import { API, PASSWORD, uniqueEmail } from "./support/helpers";
 // they save the settings; a test cannot click the browser's own permission prompt).
 
 // What the extension's own pages (where some of these checks run) have: the part of the browser's extension API used here.
-declare const chrome: { tabs: { query(filter: { url?: string }): Promise<{ id?: number; url?: string }[]> } };
+declare const chrome: {
+  tabs: { query(filter: { url?: string }): Promise<{ id?: number; url?: string }[]> };
+  contextMenus: { onClicked: { hasListeners(): boolean } };
+};
+
+// What the extension's background code offers the tests (a native right-click menu cannot be clicked from a test).
+type Background = { inklingBackground: { openForSelection(tab: { id: number }): Promise<unknown> } };
 
 const ORIGIN = "http://localhost:13000"; // the website, which is where a person makes the key
 const ARTICLE_HOST = "http://localhost:9911";
@@ -87,6 +93,9 @@ test.describe("the browser extension", () => {
     await context.route(`${ARTICLE_HOST}/**`, (route) => {
       const path = new URL(route.request().url()).pathname;
       if (path === "/thin") return route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Report</title><body>Tiny</body>" });
+      // the test AI service writes slowly when the text says SLOW_ME, and fails part of the way when it says FAIL_ME
+      if (path === "/slow") return route.fulfill({ contentType: "text/html", body: ARTICLE_HTML.replace("</article>", "<p>SLOW_ME</p></article>") });
+      if (path === "/fail") return route.fulfill({ contentType: "text/html", body: ARTICLE_HTML.replace("</article>", "<p>FAIL_ME</p></article>") });
       return route.fulfill({ contentType: "text/html", body: ARTICLE_HTML });
     });
   });
@@ -313,6 +322,106 @@ test.describe("the browser extension", () => {
     await article.close();
     await configure(options, key);
     await options.close();
+  });
+
+  test("the summary appears as it is written, and the buttons wait until it is done", async () => {
+    const { popup, article } = await popupFor("/slow");
+    await popup.getByRole("button", { name: "Summarize this page" }).click();
+    const summary = popup.locator("#summary");
+    // the first words are there while the rest is still coming: Stop is offered, Copy is not
+    await expect(summary.getByRole("heading", { name: "Stub summary" })).toBeVisible();
+    await expect(popup.getByRole("status").filter({ hasText: "Writing the summary…" })).toBeVisible();
+    await expect(popup.getByRole("button", { name: "Stop" })).toBeVisible();
+    await expect(popup.getByRole("button", { name: "Copy", exact: true })).toBeHidden();
+    await expect(summary).toHaveAttribute("aria-busy", "true");
+    await expect(summary).not.toContainText("Options:"); // the last line has not been written yet
+    // then it finishes
+    await expect(summary).toContainText("Options: default, 150 words, English", { timeout: 30_000 });
+    await expect(popup.getByRole("button", { name: "Stop" })).toBeHidden();
+    await expect(popup.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
+    await expect(summary).toHaveAttribute("aria-busy", "false");
+    await expect(popup.getByRole("status").filter({ hasText: "summaries left today" })).toBeVisible();
+    await popup.close();
+    await article.close();
+  });
+
+  test("stopping part of the way keeps what was written", async () => {
+    const { popup, article } = await popupFor("/slow");
+    await popup.getByRole("button", { name: "Summarize this page" }).click();
+    await expect(popup.locator("#summary").getByRole("heading", { name: "Stub summary" })).toBeVisible();
+    await popup.getByRole("button", { name: "Stop" }).click();
+    await expect(popup.getByRole("status").filter({ hasText: "Stopped. This is what was written so far." })).toBeVisible();
+    await expect(popup.locator("#summary").getByRole("heading", { name: "Stub summary" })).toBeVisible();
+    await expect(popup.locator("#summary")).not.toContainText("Options:");
+    await expect(popup.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
+    await popup.getByRole("button", { name: "Summarize again" }).click();
+    await expect(popup.getByRole("button", { name: "Summarize this page" })).toBeVisible();
+    await popup.close();
+    await article.close();
+  });
+
+  test("a stream that fails part of the way is an error, not a half summary", async () => {
+    const { popup, article } = await popupFor("/fail");
+    await popup.getByRole("button", { name: "Summarize this page" }).click();
+    await expect(popup.getByRole("alert")).toContainText("The summary could not be made right now.");
+    await expect(popup.locator("#summary")).toBeHidden();
+    await expect(popup.getByRole("button", { name: "Summarize this page" })).toBeVisible(); // it can be tried again
+    await popup.close();
+    await article.close();
+  });
+
+  async function backgroundWorker() {
+    return context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
+  }
+
+  async function tabIdOf(pattern: string): Promise<number> {
+    const options = await openOptions();
+    const id = await options.evaluate(async (url) => (await chrome.tabs.query({ url }))[0].id, pattern);
+    await options.close();
+    return id as number;
+  }
+
+  test("the right-click entry opens a window that summarizes the selection, and asks for nothing more", async () => {
+    const article = await context.newPage();
+    await article.goto(`${ARTICLE_HOST}/article`);
+    await article.evaluate(() => {
+      const range = document.createRange();
+      range.selectNodeContents(document.querySelectorAll("article p")[2]);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+    const tabId = await tabIdOf(`${ARTICLE_HOST}/*`);
+    const worker = await backgroundWorker();
+    expect(await worker.evaluate(() => chrome.contextMenus.onClicked.hasListeners())).toBe(true);
+
+    const [popup] = await Promise.all([
+      context.waitForEvent("page"),
+      worker.evaluate((id) => (globalThis as unknown as Background).inklingBackground.openForSelection({ id }), tabId),
+    ]);
+    expect(popup.url()).toContain(`popup.html?tab=${tabId}&selection=1`);
+    const selected = ARTICLE.paragraphs[2];
+    // no button was pressed: the window went straight to summarizing what was selected
+    await expect(popup.locator("#summary")).toContainText(`Words in source: ${words(selected).length}`);
+    await expect(popup.locator("#summary")).toContainText(`Opening words: ${words(selected).slice(0, 8).join(" ")}`);
+    await expect(popup.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
+    await popup.close();
+    await article.close();
+  });
+
+  test("the right-click window with nothing selected any more just shows the usual screen", async () => {
+    const article = await context.newPage();
+    await article.goto(`${ARTICLE_HOST}/article`); // no selection made
+    const tabId = await tabIdOf(`${ARTICLE_HOST}/*`);
+    const worker = await backgroundWorker();
+    const [popup] = await Promise.all([
+      context.waitForEvent("page"),
+      worker.evaluate((id) => (globalThis as unknown as Background).inklingBackground.openForSelection({ id }), tabId),
+    ]);
+    await expect(popup.getByRole("button", { name: "Summarize this page" })).toBeVisible();
+    await expect(popup.locator("#summary")).toBeHidden();
+    await popup.close();
+    await article.close();
   });
 
   test("the popup and the settings page have no accessibility violations", async () => {

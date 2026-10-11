@@ -14,12 +14,14 @@ itself before loading, because a test cannot answer the browser's own permission
 """
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import traceback
 import threading
+import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -96,7 +98,27 @@ class Handler(BaseHTTPRequestHandler):
         )
         text = body.get("text", "")
         summary = f"## Fake summary\n\n- Words in source: {len(text.split())}\n- Opening: {' '.join(text.split()[:6])}\n- **Options**: {url.query}"
+        if seen[-1]["query"].get("stream") == "true":
+            return self._stream(summary)
         self._send(200, json.dumps({"summary": summary, "filename": "Pasted Text"}), extra={"X-Quota-Remaining": "41"})
+
+    def _stream(self, summary):
+        """The summary as server-sent events, a few words at a time, as the Inkling API sends it."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Quota-Remaining", "41")
+        self.end_headers()
+
+        def send(event):
+            self.wfile.write(f"data: {json.dumps(event)}\n\n".encode())
+            self.wfile.flush()
+
+        send({"type": "status", "stage": "writing"})
+        for piece in re.findall(r"\S+\s*", summary):
+            send({"type": "delta", "text": piece})
+            time.sleep(0.01)
+        send({"type": "done", "filename": "Pasted Text"})
 
 
 def build_extension(target: Path, host: str) -> Path:
@@ -233,7 +255,7 @@ def main() -> int:
         check("with no selection there is only the page button", not driver.find_element(By.ID, "summarize-selection").is_displayed())
         check("the saved length is chosen", driver.find_element(By.ID, "length").get_attribute("value") == "300")
         driver.find_element(By.ID, "summarize-page").click()
-        wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "#summary h3")))
+        wait.until(EC.visibility_of_element_located((By.ID, "copy")))  # the summary grows as it is written: Copy shows when done
         check("the summary is shown with its heading", text_of("#summary h3") == "Fake summary")
         items = driver.find_elements(By.CSS_SELECTOR, "#summary li")
         check("and as a list", len(items) == 3, str(len(items)))
@@ -244,6 +266,7 @@ def main() -> int:
         check("the request went to the summarize route with the choices", call["query"].get("wordCount") == "300" and call["query"].get("language") == "English", str(call["query"]))
         check("from the extension's own origin, with no cookie", str(call["origin"]).startswith("moz-extension://") and not call["cookie"], f"{call['origin']} {call['cookie']}")
         check("the page's title leads the text that was sent", call["body"]["text"].startswith(TITLE), call["body"]["text"][:60])
+        check("the summary was asked for as a stream, and arrived whole", call["query"].get("stream") == "true" and "Options" in text_of("#summary"), str(call["query"]))
 
         # ---- a selection -------------------------------------------------------------------------------------------------
         print("popup, a selection")
@@ -258,7 +281,7 @@ def main() -> int:
         count = len(PARAGRAPHS[1].split())
         check("the selection is counted", text_of("#selection-info") == f"{count} words selected", text_of("#selection-info"))
         driver.find_element(By.ID, "summarize-selection").click()
-        wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "#summary h3")))
+        wait.until(EC.visibility_of_element_located((By.ID, "copy")))  # the summary grows as it is written: Copy shows when done
         check("only the selection was summarized", f"Words in source: {count}" in text_of("#summary"), text_of("#summary"))
 
         # ---- a wrong key -----------------------------------------------------------------------------------------------------

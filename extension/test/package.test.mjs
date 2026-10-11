@@ -19,11 +19,11 @@ function* files(dir) {
 test("the manifest is a Manifest V3 one that asks for as little as it can", () => {
   assert.equal(manifest.manifest_version, 3);
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
-  assert.deepEqual([...manifest.permissions].sort(), ["activeTab", "scripting", "storage"]);
+  assert.deepEqual([...manifest.permissions].sort(), ["activeTab", "contextMenus", "scripting", "storage"]);
   assert.equal(manifest.host_permissions, undefined, "no host is allowed up front: the person allows one server when they set it up");
   assert.ok(manifest.optional_host_permissions.every((p) => /^(https:\/\/\*|http:\/\/(localhost|127\.0\.0\.1))\/\*$/.test(p)), "only https servers, and this machine");
-  assert.equal(manifest.background, undefined, "nothing runs in the background");
   assert.equal(manifest.content_scripts, undefined, "no page is read until the person asks");
+  assert.deepEqual(manifest.background, { service_worker: "background.js", type: "module" }, "one background file, for the right-click entry");
 });
 
 test("every file the manifest names is there, and every icon is the size it says", () => {
@@ -96,6 +96,15 @@ test("the pages run no inline script and load nothing from elsewhere", () => {
     assert.ok(!/\son\w+\s*=/i.test(text), `${path} has an inline event handler`);
     assert.ok(!/(src|href)="https?:/i.test(text), `${path} loads something from the web`);
   }
+});
+
+test("the background code only adds the right-click entry and opens the popup's page: it reads nothing and sends nothing", () => {
+  const code = read("background.js");
+  for (const forbidden of ["fetch(", "XMLHttpRequest", "WebSocket", "sendBeacon", "executeScript", "scripting", "apiKey", "storage", "tabs.query", "innerText", "document"]) {
+    assert.ok(!code.includes(forbidden), `background.js uses ${forbidden}`);
+  }
+  assert.match(code, /contexts: \["selection"\]/, "the entry only appears where text is selected");
+  assert.match(code, /popup\.html\?tab=\$\{tab\.id\}&selection=1/, "it opens the popup's page, aimed at the tab");
 });
 
 test("the code never builds markup from text, and never runs text as code", () => {
