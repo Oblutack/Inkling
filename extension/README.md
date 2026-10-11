@@ -1,6 +1,6 @@
 # Inkling for the browser
 
-A small extension that summarizes the page you are reading, or the text you have selected, with your own Inkling
+A small extension, for **Chrome** (and other Chromium browsers) and for **Firefox**, that summarizes the page you are reading, or the text you have selected, with your own Inkling
 account. Press the button, read the summary in the popup, copy it, or keep it in your Inkling library.
 
 It has **no build step and no dependencies**: the code in this folder is what the browser runs.
@@ -17,7 +17,7 @@ It has **no build step and no dependencies**: the code in this folder is what th
   browser's language.
 - **Light and dark**, following the browser, and usable with a keyboard and a screen reader.
 
-## Trying it out (developer mode)
+## Trying it out in Chrome (developer mode)
 
 1. Open `chrome://extensions` and turn on **Developer mode**.
 2. Choose **Load unpacked** and pick this `extension/` folder.
@@ -27,6 +27,27 @@ It has **no build step and no dependencies**: the code in this folder is what th
 5. Open any web page and press the extension's icon.
 
 **Test the connection** on the settings page shows the key's name and how much of its daily limit is used.
+
+## Trying it out in Firefox
+
+Firefox needs its own manifest (an add-on id, and a statement of what data the add-on collects; Chrome's minimum version is dropped), so
+build the Firefox version first and load that, not the folder itself:
+
+```bash
+python scripts/package_extension.py --firefox --unpacked dist/firefox
+```
+
+1. Open `about:debugging#/runtime/this-firefox` and choose **Load Temporary Add-on...**.
+2. Pick `dist/firefox/manifest.json`. (A temporary add-on is removed when Firefox closes; for a permanent one, install the signed file
+   from addons.mozilla.org, see below.)
+3. Set it up exactly as for Chrome: make a key, open the add-on's settings (the add-on's **Preferences** in `about:addons`, or the gear
+   in the popup), enter the address and the key, press **Save**, and allow access to that one address when Firefox asks.
+
+It needs **Firefox 140 or newer** (140 is the extended-support release). Firefox for Android is declared as 142 or newer; it has not been tried.
+
+What differs from Chrome, and is handled: the add-on has an id (`inkling-extension@oblutack.github.io`, set in `scripts/package_extension.py`;
+change it if you publish under another name), Firefox sends no `Origin` on a plain `GET` (only on the `POST`, where it is `moz-extension://...`,
+which the API allows for the `/v1` routes just as it allows `chrome-extension://...`), and a match pattern for a tab has no port.
 
 ## What it can access
 
@@ -63,6 +84,7 @@ lib/i18n.js          Words from _locales, and the sentence for each failure
 _locales/            en, es, de, fr, bs
 icons/               16, 32, 48 and 128 pixels
 test/                Node's own test runner (no dependencies)
+test/firefox/        Loads the Firefox build into a real Firefox (Selenium, a fake server)
 ```
 
 ## Tests
@@ -80,15 +102,34 @@ copying, a page with no text, a page the browser will not let extensions read, a
 cannot be reached, and accessibility). That test copies the extension and adds a fixed key and permission for localhost, which a
 person gives in the browser's own prompt.
 
+The Firefox build is loaded into a real Firefox by `test/firefox/run_firefox_test.py` (settings, a page, a selection, a wrong key, a server
+that cannot be reached; 23 checks), against a small fake Inkling server that writes down what it is sent: that the key arrives, that the
+server sees the add-on's own `moz-extension://` origin, and that no cookie goes with it. It also checks that the page text it reads is the
+article and not the menu or the footer.
+
+```bash
+pip install selenium
+python extension/test/firefox/run_firefox_test.py    # needs Firefox; Selenium fetches the driver itself
+npx web-ext lint -s dist/firefox                     # Mozilla's own rules for add-ons (build dist/firefox first)
+```
+
+CI runs both on every push. (Selenium installs the add-on through WebDriver BiDi, by path: its older `install_addon` hands Firefox a file
+that Firefox keeps open, which Windows then will not let the driver delete.)
+
 ## Packaging and publishing
 
 ```bash
-python scripts/package_extension.py        # -> dist/inkling-extension-<version>.zip
+python scripts/package_extension.py            # Chrome:  dist/inkling-extension-<version>.zip
+python scripts/package_extension.py --firefox  # Firefox: dist/inkling-extension-<version>-firefox.zip
 ```
 
-The zip holds only what runs (no tests, no README). CI builds the same zip on every push and keeps it for two weeks.
+The zips hold only what runs (no tests, no README). CI builds both on every push and keeps them for two weeks.
 
 To publish: raise `version` in `manifest.json`, build the zip, and upload it in the
 [Chrome Web Store developer dashboard](https://chrome.google.com/webstore/devconsole) (a one-time registration fee applies).
 The listing needs: the description from `_locales/en/messages.json`, at least one screenshot (1280×800), a link to the privacy note
-above, and a short reason for each permission (the table above). Firefox was not tried: it would need at least a `browser_specific_settings` entry in the manifest.
+above, and a short reason for each permission (the table above).
+
+For Firefox, upload the `-firefox` zip at [addons.mozilla.org/developers](https://addons.mozilla.org/developers/). There is no build step,
+so there is no separate source package to send. The add-on id and the data statement (`data_collection_permissions`: none, because
+what the add-on sends goes only to the server the person chose) are in the Firefox manifest that the script writes.

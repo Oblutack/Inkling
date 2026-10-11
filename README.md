@@ -69,7 +69,7 @@ Inkling turns PDFs, Word and PowerPoint files, photos of pages, web pages, recor
 - **Your data is yours:** one-click JSON export and permanent account deletion (hard delete, re-authenticated).
 - Saved history with cursor pagination, PDF export, and daily usage meters.
 - **An API for your own programs.** Make a key on the account page (up to five; shown once, only a hash is kept, revocable at once) and call `/v1` with `Authorization: Bearer ink_...` to summarize text, web pages, documents, photos and recordings. A key can only use the `/v1` routes (summarize, compare, extract and its own usage), so a leaked one can neither read your library nor touch your account; nothing it does is saved unless the call asks for it. It draws on your daily allowance and is held by the same rate limits and spending guard as the website. A key can be given an **expiry date** and a **daily limit of its own** when it is made, the account page shows what each key has done today and in all, and `?save=true` keeps a result in your library (the reply then has its `id`). Besides summarizing, a program can **compare** two texts and **extract fields** from one. See *The API for programs* below and `docs/openapi.yaml`.
-- **A browser extension.** Press its button to summarize the page you are reading, or just the text you selected, with your own account and an API key (it reads the page in your browser, asks the browser for permission to talk to your one server, runs nothing in the background and sends nothing until you ask; the popup and settings come in the five languages of the site, in light and dark). Load it from `extension/` in developer mode: see [`extension/README.md`](extension) and its [privacy note](docs/PRIVACY-EXTENSION.md).
+- **A browser extension, for Chrome and Firefox.** Press its button to summarize the page you are reading, or just the text you selected, with your own account and an API key (it reads the page in your browser, asks the browser for permission to talk to your one server, runs nothing in the background and sends nothing until you ask; the popup and settings come in the five languages of the site, in light and dark). Load it from `extension/` in developer mode (Chrome), or build the Firefox version with `python scripts/package_extension.py --firefox`: see [`extension/README.md`](extension) and its [privacy note](docs/PRIVACY-EXTENSION.md).
 
 ### Built for production
 - Per-user daily quotas (with refunds when work fails), per-IP and per-user rate limits, a per-account login throttle, and optional **Cloudflare Turnstile** bot protection.
@@ -383,7 +383,7 @@ The project has **1,400+ automated tests** across the stack (about 380 Go tests,
 | Go API | Unit and Postgres integration tests with the race detector, `golangci-lint`, `govulncheck` | `go-api/` |
 | AI service | `pytest` with coverage, `ruff` (lint and format), `mypy`, `pip-audit` | `python-ai-service/` |
 | Frontend | `eslint`, `tsc`, Vitest unit tests with coverage, production build, `pnpm audit` | `frontend/` |
-| Browser extension | Node's test runner (settings, API calls, Markdown drawing, the package: permissions, languages, no inline script), and the build of the store zip | `extension/test/` |
+| Browser extension | Node's test runner (settings, API calls, Markdown drawing, the package: permissions, languages, no inline script); the Firefox build loaded into a real Firefox with Selenium, and checked with `web-ext lint`; the store zips are built | `extension/test/` |
 | End to end | Playwright drives the whole stack in a real browser (sign-up, login, reset, summaries, chat, account, CSP), and the extension loaded into a real Chromium | `frontend/e2e/` |
 
 `````````bash
@@ -431,7 +431,7 @@ What is covered, beyond the happy paths: concurrency (a quota of 3 admits exactl
 | Sessions | Random 256-bit tokens in `httpOnly` cookies, only a hash stored; 30-day sliding expiry with a 90-day hard limit; revoked on logout, password change, reset and account deletion. |
 | Passwords | bcrypt at cost 12 (older hashes are upgraded at the next login), 8-72 characters, a list of about 200 common passwords plus pattern checks (repeats, runs like `87654321` or `asdfghjk`, the email name), equal-time comparison for unknown users, per-account login throttle. |
 | Accounts | Signing up says the same thing whether or not the address already has an account (the owner is told by email, at most once an hour), so signup cannot be used to check lists of emails. |
-| CSRF | `Origin` check on every state-changing request, strict credentialed CORS allowlist, `SameSite` cookies. A key has no place in a web page, so pages of other sites are refused on the key routes too; only a browser extension (its origin is set by the browser and a page cannot forge it) may call `/v1` with a key. |
+| CSRF | `Origin` check on every state-changing request, strict credentialed CORS allowlist, `SameSite` cookies. A key has no place in a web page, so pages of other sites are refused on the key routes too; only a browser extension (Chrome's or Firefox's: its origin is set by the browser and a page cannot forge it) may call `/v1` with a key. |
 | Injection and XSS | Parameterized SQL only; nonce-based Content-Security-Policy with `strict-dynamic`; the API serves a `default-src 'none'` CSP. |
 | Abuse | Per-IP and per-user rate limits, atomic daily quotas, optional Turnstile, request and upload size caps. |
 | Fetching web pages | The AI service only opens public addresses: every address, and every redirect, must resolve to the public internet (no loopback, private ranges, cloud metadata or Docker-internal names), the address the connection really reached is checked before any of the reply is read (so DNS tricks fail), and downloads are capped in size and time, with no proxies, cookies or credentials. |
@@ -478,7 +478,7 @@ Schema changes are SQL migrations in [`go-api/migrations/`](go-api/migrations), 
 │   ├── mailer/               log / Brevo / Resend providers and email templates
 │   ├── migrations/           Embedded SQL migrations
 │   └── testutil/             Per-package Postgres schemas for integration tests
-├── extension/                The browser extension (Manifest V3, no build step, no dependencies), with its own tests
+├── extension/                The browser extension for Chrome and Firefox (Manifest V3, no build step, no dependencies), with its own tests
 ├── python-ai-service/
 │   ├── main.py               Endpoints and the summarization pipeline
 │   ├── llm.py                Model verification, fallback, circuit breaker

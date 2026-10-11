@@ -1,6 +1,6 @@
 # Privacy: the Inkling browser extension
 
-The extension summarizes a web page, or text you have selected, with **your own Inkling account**. This note says what it does with
+This note is the same for the Chrome and the Firefox version. The extension summarizes a web page, or text you have selected, with **your own Inkling account**. This note says what it does with
 your data, in plain words.
 
 ## What is sent, and when
