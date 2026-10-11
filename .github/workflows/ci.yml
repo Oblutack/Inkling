@@ -131,6 +131,27 @@ jobs:
           python scripts/changelog.py -o "$RUNNER_TEMP/CHANGELOG.md"
           grep -q "^### Added" "$RUNNER_TEMP/CHANGELOG.md"
 
+  # The browser extension has no build step and no dependencies: its own tests run on plain Node, and the store package is
+  # built (and kept for two weeks) so what is uploaded is exactly what was tested. Its tests in a real browser are in the
+  # e2e job below.
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test "extension/test/*.test.mjs"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - run: python scripts/package_extension.py -o "$RUNNER_TEMP/inkling-extension.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: inkling-extension
+          path: ${{ runner.temp }}/inkling-extension.zip
+          retention-days: 14
+
   # The whole stack in a real browser: Postgres, the Go API, the production Next build and a stub
   # standing in for the AI service (so the run is fast, free and deterministic).
   e2e:

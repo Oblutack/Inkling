@@ -32,3 +32,6 @@ coverage.out
 
 # summary-quality check: every run writes a result file; baseline.json is the one kept
 python-ai-service/evals/summary/results/
+
+# Built packages
+dist/
