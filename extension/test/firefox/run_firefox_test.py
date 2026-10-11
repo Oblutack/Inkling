@@ -70,6 +70,8 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/article":
             return self._send(200, ARTICLE, "text/html; charset=utf-8")
+        if path == "/launcher":  # an ordinary page, from which the add-on's own pages are opened (see open_extension_page)
+            return self._send(200, "<!doctype html><title>launcher</title><p>launcher</p>", "text/html; charset=utf-8")
         if path == "/v1/usage":
             if self.headers.get("Authorization") != f"Bearer {KEY}":
                 return self._send(401, json.dumps({"code": "invalid_api_key", "error": "bad key"}))
@@ -102,6 +104,9 @@ def build_extension(target: Path, host: str) -> Path:
     manifest_path = target / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["host_permissions"] = [f"http://{host}/*"]
+    # The test opens the two pages from an ordinary page (newer Firefox will not let WebDriver navigate to a page of an
+    # add-on), and an ordinary page may only open what the add-on lists here.
+    manifest["web_accessible_resources"] = [{"resources": ["options.html", "popup.html"], "matches": [f"http://{host}/*"]}]
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return target
 
@@ -155,10 +160,23 @@ def main() -> int:
         def text_of(selector):
             return driver.find_element(By.CSS_SELECTOR, selector).text
 
+        driver.get(f"{base}/launcher")
+        launcher_handle = driver.current_window_handle
+
+        def open_extension_page(path):
+            """Opens a page of the add-on in a new tab, as a link on an ordinary page would, and switches to it."""
+            driver.switch_to.window(launcher_handle)
+            before = set(driver.window_handles)
+            driver.execute_script("window.open(arguments[0], '_blank')", f"{extension}/{path}")
+            wait.until(lambda d: len(set(d.window_handles) - before) == 1)
+            driver.switch_to.window((set(driver.window_handles) - before).pop())
+            # a tab that has only just opened answers a script with nothing: wait until it is the add-on's page, loaded
+            wait.until(lambda d: d.current_url.startswith("moz-extension://") and d.execute_script("return document.readyState") == "complete")
+
         def open_options():
-            driver.get(f"{extension}/options.html")
+            open_extension_page("options.html")
             # the page fills in its choices (and starts listening to the form) after it has read the stored settings
-            wait.until(lambda d: d.execute_script("return document.querySelectorAll('#language option').length") > 0)
+            wait.until(lambda d: (d.execute_script("return document.querySelectorAll('#language option').length") or 0) > 0)
 
         # ---- the settings page -------------------------------------------------------------------------------
         print("settings page")
@@ -200,13 +218,12 @@ def main() -> int:
         tab_id = driver.execute_async_script(
             """const done = arguments[arguments.length - 1];
                browser.tabs.query({ url: arguments[0] }).then((tabs) => done(tabs[0] && tabs[0].id), () => done(null));""",
-            f"http://127.0.0.1/*",  # a match pattern has no port
+            "http://127.0.0.1/article",  # a match pattern has no port (and the launcher tab is another path)
         )
         check("the extension can see the page's tab", isinstance(tab_id, int), str(tab_id))
 
         def open_popup():
-            driver.switch_to.new_window("tab")
-            driver.get(f"{extension}/popup.html?tab={tab_id}")
+            open_extension_page(f"popup.html?tab={tab_id}")
             wait.until(EC.visibility_of_element_located((By.ID, "page-title")))
 
         print("popup, whole page")
@@ -226,7 +243,6 @@ def main() -> int:
         check("the request went to the summarize route with the choices", call["query"].get("wordCount") == "300" and call["query"].get("language") == "English", str(call["query"]))
         check("from the extension's own origin, with no cookie", str(call["origin"]).startswith("moz-extension://") and not call["cookie"], f"{call['origin']} {call['cookie']}")
         check("the page's title leads the text that was sent", call["body"]["text"].startswith(TITLE), call["body"]["text"][:60])
-        popup_handle = driver.current_window_handle
 
         # ---- a selection -------------------------------------------------------------------------------------------------
         print("popup, a selection")
@@ -236,8 +252,7 @@ def main() -> int:
                range.selectNodeContents(document.querySelectorAll('article p')[1]);
                const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);"""
         )
-        driver.switch_to.window(popup_handle)
-        driver.refresh()
+        open_popup()  # a new popup, which looks at the page again
         wait.until(EC.visibility_of_element_located((By.ID, "selection-info")))
         count = len(PARAGRAPHS[1].split())
         check("the selection is counted", text_of("#selection-info") == f"{count} words selected", text_of("#selection-info"))
@@ -253,7 +268,7 @@ def main() -> int:
         key_field.send_keys("ink_" + "x" * 40)
         driver.find_element(By.ID, "save").click()
         wait.until(lambda d: text_of("#status") == "Settings saved.")
-        driver.get(f"{extension}/popup.html?tab={tab_id}")
+        open_extension_page(f"popup.html?tab={tab_id}")
         wait.until(EC.element_to_be_clickable((By.ID, "summarize-page")))
         driver.find_element(By.ID, "summarize-page").click()
         wait.until(lambda d: "was not accepted" in text_of("#error"))
@@ -268,7 +283,7 @@ def main() -> int:
             element.send_keys(value)
         driver.find_element(By.ID, "save").click()
         wait.until(lambda d: text_of("#status") in ("Settings saved.", ""))
-        driver.get(f"{extension}/popup.html?tab={tab_id}")
+        open_extension_page(f"popup.html?tab={tab_id}")
         wait.until(EC.element_to_be_clickable((By.ID, "summarize-page")))
         driver.find_element(By.ID, "summarize-page").click()
         wait.until(lambda d: "Could not reach 127.0.0.1:9." in text_of("#error"))
