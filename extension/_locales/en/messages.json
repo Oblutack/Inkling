@@ -1,0 +1,257 @@
+{
+  "extName": {
+    "message": "Inkling"
+  },
+  "extDescription": {
+    "message": "Summarize the page you are reading, or the text you have selected, with your Inkling account."
+  },
+  "actionTitle": {
+    "message": "Summarize with Inkling"
+  },
+  "setupTitle": {
+    "message": "Connect Inkling"
+  },
+  "setupText": {
+    "message": "Add your Inkling address and an API key to start. You make a key on your account page."
+  },
+  "openSettings": {
+    "message": "Open settings"
+  },
+  "settings": {
+    "message": "Settings"
+  },
+  "untitledPage": {
+    "message": "Untitled page"
+  },
+  "summarizePage": {
+    "message": "Summarize this page"
+  },
+  "summarizeSelection": {
+    "message": "Summarize the selection"
+  },
+  "selectionInfo": {
+    "message": "$COUNT$ words selected",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "lengthLabel": {
+    "message": "Length"
+  },
+  "lengthShort": {
+    "message": "Short (about 100 words)"
+  },
+  "lengthMedium": {
+    "message": "Medium (about 150)"
+  },
+  "lengthLong": {
+    "message": "Long (about 300)"
+  },
+  "lengthDetailed": {
+    "message": "Detailed (about 500)"
+  },
+  "styleLabel": {
+    "message": "Style"
+  },
+  "styleDefault": {
+    "message": "Standard"
+  },
+  "styleBullets": {
+    "message": "Bullet points"
+  },
+  "styleBrief": {
+    "message": "Brief"
+  },
+  "styleSimple": {
+    "message": "Simple language"
+  },
+  "styleTakeaways": {
+    "message": "Key takeaways"
+  },
+  "keepLabel": {
+    "message": "Keep it in my Inkling library"
+  },
+  "working": {
+    "message": "Reading and summarizing…"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "resultLabel": {
+    "message": "Summary"
+  },
+  "copy": {
+    "message": "Copy"
+  },
+  "copied": {
+    "message": "Copied"
+  },
+  "again": {
+    "message": "Summarize again"
+  },
+  "savedNote": {
+    "message": "Saved to your library."
+  },
+  "quotaLeft": {
+    "message": "$COUNT$ summaries left today.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "cannotRead": {
+    "message": "Inkling cannot read this kind of page (for example a browser settings page or the Chrome Web Store). Open a normal web page and try again."
+  },
+  "noText": {
+    "message": "There is no text on this page to summarize."
+  },
+  "allowTitle": {
+    "message": "Allow access to your Inkling server"
+  },
+  "allowText": {
+    "message": "The extension needs your permission to talk to $HOST$.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "allowButton": {
+    "message": "Allow"
+  },
+  "permissionDenied": {
+    "message": "Without that permission the extension cannot reach your Inkling server."
+  },
+  "errNetwork": {
+    "message": "Could not reach $HOST$. Check the address in the settings and your connection.",
+    "placeholders": {
+      "host": {
+        "content": "$1"
+      }
+    }
+  },
+  "errInvalidKey": {
+    "message": "The API key was not accepted. Check it in the settings, or make a new one on your Inkling account page."
+  },
+  "errExpiredKey": {
+    "message": "This API key has expired. Make a new one on your Inkling account page."
+  },
+  "errKeyLimit": {
+    "message": "This key has used its daily limit. It resets at midnight UTC."
+  },
+  "errQuota": {
+    "message": "Your daily allowance is used up. It resets at midnight UTC."
+  },
+  "errRateLimit": {
+    "message": "Too many requests. Wait $COUNT$ seconds and try again.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
+  },
+  "errRateLimitSoon": {
+    "message": "Too many requests. Wait a moment and try again."
+  },
+  "errTooLarge": {
+    "message": "This page has too much text to summarize in one go. Select the part you want and try again."
+  },
+  "errPaused": {
+    "message": "Inkling has paused summaries for today. Try again later."
+  },
+  "errAi": {
+    "message": "The summary could not be made right now. Try again in a moment."
+  },
+  "errBadRequest": {
+    "message": "Inkling did not accept this request: $MESSAGE$",
+    "placeholders": {
+      "message": {
+        "content": "$1"
+      }
+    }
+  },
+  "errUnknown": {
+    "message": "Something went wrong (error $STATUS$).",
+    "placeholders": {
+      "status": {
+        "content": "$1"
+      }
+    }
+  },
+  "optionsTitle": {
+    "message": "Inkling settings"
+  },
+  "addressLabel": {
+    "message": "Inkling address"
+  },
+  "addressHint": {
+    "message": "The web address of your Inkling server, for example https://api.example.com. Plain http is only allowed for localhost."
+  },
+  "keyLabel": {
+    "message": "API key"
+  },
+  "keyHint": {
+    "message": "Make one on your Inkling account page. It is kept in this browser only and sent only to the address above."
+  },
+  "showKey": {
+    "message": "Show"
+  },
+  "hideKey": {
+    "message": "Hide"
+  },
+  "defaultsTitle": {
+    "message": "Defaults"
+  },
+  "languageLabel": {
+    "message": "Summary language"
+  },
+  "saveButton": {
+    "message": "Save"
+  },
+  "saved": {
+    "message": "Settings saved."
+  },
+  "testButton": {
+    "message": "Test the connection"
+  },
+  "testOk": {
+    "message": "Connected. Key “$NAME$”: $USED$ of $LIMIT$ requests used today.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "used": {
+        "content": "$2"
+      },
+      "limit": {
+        "content": "$3"
+      }
+    }
+  },
+  "testOkNoLimit": {
+    "message": "Connected. Key “$NAME$”: $USED$ requests used today.",
+    "placeholders": {
+      "name": {
+        "content": "$1"
+      },
+      "used": {
+        "content": "$2"
+      }
+    }
+  },
+  "errAddress": {
+    "message": "Enter a valid address that starts with https:// (http:// works only for localhost)."
+  },
+  "errKeyFormat": {
+    "message": "An Inkling API key starts with ink_."
+  },
+  "privacyTitle": {
+    "message": "What is sent where"
+  },
+  "privacyText": {
+    "message": "The text of the page (or your selection) is sent to the Inkling address above when you press the button, and nowhere else. Nothing is read in the background, and nothing is sent until you ask."
+  }
+}
