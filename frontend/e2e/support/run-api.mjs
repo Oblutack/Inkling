@@ -48,6 +48,8 @@ const child = spawn(bin, [], {
     MAIL_PROVIDER: "log",
     REQUIRE_EMAIL_VERIFICATION: "false",
     TURNSTILE_SECRET: "",
+    // Two-step sign-in needs a key for its secrets (32 bytes, base64); this one is only for the tests.
+    TOTP_ENCRYPTION_KEY: Buffer.from("e2e-key-e2e-key-e2e-key-e2e-key!").toString("base64"),
     QUOTA_SUMMARIES_PER_DAY: "50",
     QUOTA_CHAT_PER_DAY: "200",
     // The spending guard is on, with room for the whole suite (every test visits from the same address).
