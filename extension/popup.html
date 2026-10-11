@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inkling</title>
+    <link rel="stylesheet" href="ui.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="stack">
+      <header class="bar">
+        <h1>Inkling</h1>
+        <button type="button" id="open-settings" class="icon" data-i18n-attr="aria-label:settings,title:settings">&#9881;</button>
+      </header>
+
+      <section id="setup" class="stack" hidden>
+        <h2 data-i18n="setupTitle"></h2>
+        <p data-i18n="setupText"></p>
+        <button type="button" id="setup-button" data-i18n="openSettings"></button>
+      </section>
+
+      <section id="access" class="stack" hidden>
+        <h2 data-i18n="allowTitle"></h2>
+        <p id="access-text"></p>
+        <button type="button" id="allow-button" data-i18n="allowButton"></button>
+      </section>
+
+      <section id="ready" class="stack" hidden>
+        <div>
+          <p id="page-title" class="page-title"></p>
+          <p id="page-host" class="muted"></p>
+          <p id="selection-info" class="muted" hidden></p>
+        </div>
+        <div class="row">
+          <div>
+            <label for="length" data-i18n="lengthLabel"></label>
+            <select id="length"></select>
+          </div>
+          <div>
+            <label for="style" data-i18n="styleLabel"></label>
+            <select id="style"></select>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="keep" /> <span data-i18n="keepLabel"></span></label>
+        <div class="actions">
+          <button type="button" id="summarize-selection" hidden data-i18n="summarizeSelection"></button>
+          <button type="button" id="summarize-page" data-i18n="summarizePage"></button>
+        </div>
+      </section>
+
+      <section id="working" class="stack" hidden>
+        <p id="working-text" role="status" data-i18n="working"></p>
+        <div class="bar-anim" aria-hidden="true"></div>
+        <button type="button" id="cancel" class="secondary" data-i18n="cancel"></button>
+      </section>
+
+      <section id="result" class="stack" hidden>
+        <h2 id="result-heading" data-i18n="resultLabel"></h2>
+        <div id="summary" class="summary" tabindex="-1" aria-labelledby="result-heading"></div>
+        <p id="result-note" class="muted" role="status"></p>
+        <div class="actions">
+          <button type="button" id="copy" data-i18n="copy"></button>
+          <button type="button" id="again" class="secondary" data-i18n="again"></button>
+        </div>
+      </section>
+
+      <p id="error" class="error" role="alert" hidden></p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

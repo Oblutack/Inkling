@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inkling</title>
+    <link rel="stylesheet" href="ui.css" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="stack">
+      <h1 data-i18n="optionsTitle"></h1>
+
+      <form id="form" class="stack" novalidate>
+        <div>
+          <label for="address" data-i18n="addressLabel"></label>
+          <input id="address" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://" aria-describedby="address-hint address-error" />
+          <p id="address-hint" class="muted" data-i18n="addressHint"></p>
+          <p id="address-error" class="error" role="alert" hidden></p>
+        </div>
+
+        <div>
+          <label for="key" data-i18n="keyLabel"></label>
+          <div class="with-button">
+            <input id="key" type="password" autocomplete="off" spellcheck="false" placeholder="ink_" aria-describedby="key-hint key-error" />
+            <button type="button" id="toggle-key" class="secondary" data-i18n="showKey"></button>
+          </div>
+          <p id="key-hint" class="muted" data-i18n="keyHint"></p>
+          <p id="key-error" class="error" role="alert" hidden></p>
+        </div>
+
+        <fieldset>
+          <legend data-i18n="defaultsTitle"></legend>
+          <div class="row">
+            <div>
+              <label for="language" data-i18n="languageLabel"></label>
+              <select id="language"></select>
+            </div>
+            <div>
+              <label for="length" data-i18n="lengthLabel"></label>
+              <select id="length"></select>
+            </div>
+            <div>
+              <label for="style" data-i18n="styleLabel"></label>
+              <select id="style"></select>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="keep" /> <span data-i18n="keepLabel"></span></label>
+        </fieldset>
+
+        <div class="actions">
+          <button type="submit" id="save" data-i18n="saveButton"></button>
+          <button type="button" id="test" class="secondary" data-i18n="testButton"></button>
+        </div>
+        <p id="status" role="status"></p>
+      </form>
+
+      <section class="stack">
+        <h2 data-i18n="privacyTitle"></h2>
+        <p class="muted" data-i18n="privacyText"></p>
+      </section>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

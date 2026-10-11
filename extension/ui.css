@@ -1,0 +1,147 @@
+/* The look of the website: paper, ink and a fountain-pen blue, in light and dark. */
+:root {
+  --canvas: #e6e5d6;
+  --surface: #f1f0e5;
+  --ink: #222222;
+  --muted: #55554d;
+  --line: #bdbcab;
+  --accent: #1f4e79;
+  --accent-fg: #ffffff;
+  --danger: #b91c1c;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #1e1e1b;
+    --surface: #272723;
+    --ink: #e2e0d0;
+    --muted: #b3b1a2;
+    --line: #4a4a43;
+    --accent: #8ab4e0;
+    --accent-fg: #121820;
+    --danger: #fca5a5;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.25;
+  margin: 0;
+}
+
+h1 {
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+h2 {
+  font-size: 15px;
+}
+
+p {
+  margin: 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+select,
+input[type="text"],
+input[type="password"],
+input[type="url"] {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 9px;
+}
+
+select:focus-visible,
+input:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button {
+  font: inherit;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+}
+
+.error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.row > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.stack > * + * {
+  margin-top: 12px;
+}

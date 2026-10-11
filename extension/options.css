@@ -1,0 +1,47 @@
+main {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 28px 20px 40px;
+}
+
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px 14px;
+  margin: 0;
+}
+
+fieldset .row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin-bottom: 12px;
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 6px;
+}
+
+.with-button {
+  display: flex;
+  gap: 8px;
+}
+
+.with-button input {
+  flex: 1;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#status {
+  min-height: 1.5em;
+}
+
+#status.ok {
+  font-weight: 600;
+}
+
