@@ -9,6 +9,22 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Added
 
+- **extension:** Add a right-click entry that summarizes the selection
+- **extension:** Show the summary as it is written, with a Stop button
+- **ai-service:** Turn a page held at a slant level before reading it
+- **frontend:** Set up and use two-step sign-in
+- **frontend:** Add the texts for two-step sign-in in five languages
+- **go-api:** Ask for a code at sign-in and let people set two-step sign-in up
+- **go-api:** Add the tables for two-step sign-in
+- **go-api:** Make and check authenticator codes, and keep their secrets encrypted
+- **ai-service:** Add a quality check for extracting fields
+- **ai-service:** Add a quality check for comparing documents
+- **ai-service:** Rate a right given or taken away as high and retry the bottom line
+- **extension:** Summarize the page or the selection from the browser
+- **extension:** Add the texts in French and Bosnian
+- **extension:** Add the texts in Spanish and German
+- **extension:** Add the texts in English
+- **go-api:** Let a browser extension call the key routes
 - **frontend:** Mention photos, comparing and tables on the landing page
 - **frontend:** Accept HEIC photos and put attached files in order
 - **go-api:** Accept HEIC photos
@@ -120,6 +136,10 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Fixed
 
+- **ai-service:** Treat the rest of a note to the model as suspect
+- **extension:** Open the add-on's pages from a page in the Firefox test
+- **extension:** Write the language names in the language of the texts
+- **frontend:** Say that a key can save results and be used by the extension
 - **frontend:** List the translate function in the hook dependencies
 - **go-api:** Ignore forwarded addresses unless proxies are trusted
 - **frontend:** Allow the microphone and in-browser audio on the site's own pages
