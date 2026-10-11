@@ -151,6 +151,72 @@ def test_light_text_on_a_dark_background_is_turned_into_dark_on_light():
     assert out.mean() > 200
 
 
+# --- a page held at a slant ---
+
+
+def evened(angle, seed=1):
+    """What the reader sees of a photo of the lease page held at `angle` degrees, after the light is evened out."""
+    shot = photographed(page_of(LEASE), angle=angle, seed=seed)
+    return photos.even_out(photos.prepare(encoded(shot, quality=80), "lease.jpg"))
+
+
+@pytest.mark.parametrize("tilt", [-15, -12, -9, -6, -3, -2, 2, 3, 6, 9, 12, 15])
+def test_the_slant_of_a_page_is_found_and_corrected(tilt):
+    # the shading, the noise and the dark corners around the page are part of the test picture, as on a desk
+    for seed in (1, 2):
+        found = photos.skew_angle(evened(tilt, seed))
+        assert found == pytest.approx(-tilt, abs=0.6), (tilt, seed, found)
+
+
+@pytest.mark.parametrize("tilt", [-1, 0, 1])
+def test_a_page_that_is_nearly_straight_is_left_alone(tilt):
+    picture = evened(tilt)
+    assert photos.skew_angle(picture) == 0.0
+    assert photos.straighten(picture) is picture  # not even copied: every turn blurs a little
+
+
+def test_a_page_with_too_little_on_it_to_tell_is_left_alone():
+    assert photos.skew_angle(Image.new("L", (1240, 1754), 235)) == 0.0
+    one_word = page_of(["OK"]).rotate(9, expand=True, fillcolor=235)
+    assert photos.skew_angle(one_word) == 0.0
+    noise = Image.fromarray(np.random.default_rng(1).integers(0, 256, (900, 700), dtype=np.uint8))
+    assert photos.skew_angle(noise) == 0.0
+
+
+def test_a_picture_that_is_mostly_dark_is_not_taken_for_lines_of_text():
+    assert photos.skew_angle(Image.new("L", (1000, 1400), 20)) == 0.0
+
+
+def test_a_page_beyond_the_limit_is_corrected_as_far_as_the_limit():
+    found = photos.skew_angle(page_of(LEASE).rotate(25, expand=True, fillcolor=235))
+    assert found == -photos.MAX_SKEW_DEGREES or abs(found) <= photos.MAX_SKEW_DEGREES + 1
+
+
+def test_a_straightened_page_has_level_lines():
+    for tilt in (-11, 7):
+        crooked = evened(tilt)
+        level = photos.straighten(crooked)
+        assert level.size != crooked.size  # it was turned (and made bigger, so no corner is cut off)
+        assert abs(photos.skew_angle(level)) < photos.MIN_SKEW_DEGREES, tilt
+        assert np.asarray(level)[0, 0] > 200  # the corners that appeared are paper-coloured
+
+
+def test_a_dark_edge_of_the_table_does_not_hide_the_slant():
+    # a wide dark band beside the page, as in a photo taken on a dark desk
+    page = page_of(LEASE).rotate(8, expand=True, fillcolor=235)
+    page.paste(0, (0, 0, 120, page.height))
+    assert photos.skew_angle(page) == pytest.approx(-8, abs=0.6)
+
+
+def test_finding_the_slant_is_quick():
+    import time
+
+    picture = evened(7)
+    started = time.monotonic()
+    photos.skew_angle(picture)
+    assert time.monotonic() - started < 3.0
+
+
 # --- orientation ---
 
 
@@ -237,7 +303,7 @@ def reading(monkeypatch):
 
 
 def test_an_upright_page_is_read_once(reading):
-    reading["answers"] = [("The page text", 11)]
+    reading["answers"] = [("The page text", 40)]
     assert photos.read_photo(b"x", "p.jpg", "eng", 30) == "The page text"
     assert reading["reads"] == 1
 
@@ -259,6 +325,32 @@ def test_on_a_tie_the_photo_as_it_came_wins(reading):
     reading["turn"] = 90
     reading["answers"] = [("as it came", 10), ("turned", 10)]
     assert photos.read_photo(b"x", "p.jpg", "eng", 30) == "as it came"
+
+
+def test_a_page_that_gives_next_to_nothing_and_has_no_detected_turn_is_also_tried_on_its_side(reading):
+    # as when a page is on its side and slanted: the detector cannot tell, but one of the sideways readings is clear
+    reading["answers"] = [("", 0), ("garbage", 4), ("The real text of a sideways page", 60)]
+    assert photos.read_photo(b"x", "p.jpg", "eng", 30) == "The real text of a sideways page"
+    assert reading["sizes"] == [(300, 200), (200, 300), (200, 300)]
+
+
+def test_a_blank_page_is_looked_at_three_ways_and_stays_empty(reading):
+    reading["answers"] = [("", 0), ("", 0), ("", 0)]
+    assert photos.read_photo(b"x", "p.jpg", "eng", 30) == ""
+    assert reading["reads"] == 3
+
+
+def test_a_page_with_enough_text_is_not_tried_on_its_side(reading):
+    reading["answers"] = [("Only a short line.", photos.LOW_YIELD)]
+    assert photos.read_photo(b"x", "p.jpg", "eng", 30) == "Only a short line."
+    assert reading["reads"] == 1
+
+
+def test_a_detected_turn_is_trusted_and_nothing_else_is_tried(reading):
+    reading["turn"] = 90
+    reading["answers"] = [("", 0), ("", 0)]
+    photos.read_photo(b"x", "p.jpg", "eng", 30)
+    assert reading["reads"] == 2
 
 
 def test_reading_a_photo_stops_when_the_time_is_up(reading):
@@ -389,6 +481,29 @@ def test_a_page_photographed_sideways_or_upside_down_is_read(turn):
     sideways = photographed(page_of(LEASE).rotate(turn, expand=True), angle=0.5)
     text = photos.read_photos([("lease.jpg", encoded(sideways, quality=80))], "eng")[0]
     assert facts_in(text), (turn, text)
+
+
+@needs_tesseract
+@pytest.mark.parametrize("tilt", [-14, -10, -6, 6, 10, 14])
+def test_a_page_held_at_a_slant_is_read(tilt):
+    # without the correction Tesseract reads nothing at all of this page from about eight degrees on
+    slanted = photographed(page_of(LEASE), angle=tilt, seed=2)
+    text = photos.read_photos([("lease.jpg", encoded(slanted, quality=80))], "eng")[0]
+    assert facts_in(text), (tilt, text)
+
+
+@needs_tesseract
+def test_a_page_that_is_sideways_and_slanted_is_read():
+    both = photographed(page_of(LEASE), angle=9, seed=2).rotate(90, expand=True)
+    text = photos.read_photos([("lease.jpg", encoded(both, quality=80))], "eng")[0]
+    assert facts_in(text), text
+
+
+@needs_tesseract
+def test_a_straight_page_is_read_exactly_as_before():
+    straight = encoded(photographed(page_of(LEASE), angle=0, seed=2), quality=80)
+    assert photos.skew_angle(photos.even_out(photos.prepare(straight, "x.jpg"))) == 0.0
+    assert facts_in(photos.read_photos([("lease.jpg", straight)], "eng")[0])
 
 
 @needs_tesseract
