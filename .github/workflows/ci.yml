@@ -131,9 +131,10 @@ jobs:
           python scripts/changelog.py -o "$RUNNER_TEMP/CHANGELOG.md"
           grep -q "^### Added" "$RUNNER_TEMP/CHANGELOG.md"
 
-  # The browser extension has no build step and no dependencies: its own tests run on plain Node, and the store package is
-  # built (and kept for two weeks) so what is uploaded is exactly what was tested. Its tests in a real browser are in the
-  # e2e job below.
+  # The browser extension has no build step and no dependencies: its own tests run on plain Node, and the store packages are
+  # built (and kept for two weeks) so what is uploaded is exactly what was tested. Its tests in a real Chromium are in the
+  # e2e job below; here it is also loaded into a real Firefox (the runner has Firefox and its driver) and checked against
+  # Mozilla's own rules for add-ons.
   extension:
     runs-on: ubuntu-latest
     steps:
@@ -141,15 +142,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node --test "extension/test/*.test.mjs"
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
-      - run: python scripts/package_extension.py -o "$RUNNER_TEMP/inkling-extension.zip"
+      - run: node --test "extension/test/*.test.mjs"
+      - name: Build the packages
+        run: |
+          python scripts/package_extension.py -o "$RUNNER_TEMP/inkling-extension.zip"
+          python scripts/package_extension.py --firefox -o "$RUNNER_TEMP/inkling-extension-firefox.zip"
+          python scripts/package_extension.py --firefox --unpacked "$RUNNER_TEMP/firefox"
+      - name: Check the Firefox build against Mozilla's rules
+        run: npx --yes web-ext@10.7.0 lint -s "$RUNNER_TEMP/firefox" --warnings-as-errors
+      - name: Load it into a real Firefox and use it
+        run: |
+          pip install selenium==4.51.0
+          python extension/test/firefox/run_firefox_test.py
       - uses: actions/upload-artifact@v7
         with:
           name: inkling-extension
-          path: ${{ runner.temp }}/inkling-extension.zip
+          path: |
+            ${{ runner.temp }}/inkling-extension.zip
+            ${{ runner.temp }}/inkling-extension-firefox.zip
           retention-days: 14
 
   # The whole stack in a real browser: Postgres, the Go API, the production Next build and a stub
