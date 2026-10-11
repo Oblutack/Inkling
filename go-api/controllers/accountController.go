@@ -75,6 +75,8 @@ func ExportAccount(c *gin.Context) {
 		"exportedAt": time.Now().UTC(),
 		"account": gin.H{
 			"email": user.Email, "createdAt": user.CreatedAt, "emailVerified": user.EmailVerified(),
+			// whether two-step sign-in is on (its secret and recovery codes are never part of an export)
+			"twoFactorEnabled": user.TwoFactorEnabled(),
 		},
 		"documents": docs,
 		"apiKeys":   keys,

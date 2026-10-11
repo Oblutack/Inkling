@@ -3,6 +3,7 @@
 package server
 
 import (
+	"ai-summarizer/go-api/auth"
 	"ai-summarizer/go-api/controllers"
 	"ai-summarizer/go-api/metrics"
 	"ai-summarizer/go-api/middleware"
@@ -71,6 +72,13 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		logger.Warn("TRUSTED_PROXIES is not set: forwarded addresses are ignored. That is safe, but behind a proxy all visitors look like the proxy and share the per-address limits (rate limits and the anonymous daily allowance). Set TRUSTED_PROXIES to the proxy's addresses when deployed")
 	}
 
+	// Two-step sign-in keeps its secrets encrypted with a key that is not in the database: without it, it is not offered.
+	if os.Getenv(auth.EncryptionKeyEnv) == "" {
+		logger.Info("TOTP_ENCRYPTION_KEY is not set: two-step sign-in is not offered. Make a key with `openssl rand -base64 32` to turn it on")
+	} else if !auth.TwoFactorAvailable() {
+		logger.Warn("TOTP_ENCRYPTION_KEY is set but is not 32 random bytes written in base64: two-step sign-in is not offered (`openssl rand -base64 32` makes one)")
+	}
+
 	origins := middleware.AllowedOrigins()
 	config := cors.DefaultConfig()
 	config.AllowOrigins = origins
@@ -122,6 +130,7 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 	r.POST("/signup", authLimit, smallBody, turnstile, controllers.Signup)
 	r.POST("/login", authLimit, smallBody, controllers.Login)
 	r.POST("/auth/google", authLimit, smallBody, controllers.GoogleLogin)
+	r.POST("/auth/two-factor", authLimit, smallBody, controllers.TwoFactorVerify) // the second step of signing in
 	r.POST("/auth/logout", authLimit, controllers.Logout)
 	r.POST("/auth/forgot-password", authLimit, smallBody, turnstile, controllers.ForgotPassword)
 	r.POST("/auth/reset-password", authLimit, smallBody, controllers.ResetPassword)
@@ -168,6 +177,11 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		authorized.DELETE("/auth/sessions/:id", controllers.RevokeSession)
 		authorized.POST("/auth/change-password", authLimit, smallBody, controllers.ChangePassword)
 		authorized.POST("/auth/resend-verification", authLimit, controllers.ResendVerification)
+		authorized.GET("/account/two-factor", controllers.TwoFactorStatus)
+		authorized.POST("/account/two-factor/setup", authLimit, smallBody, controllers.TwoFactorSetup)
+		authorized.POST("/account/two-factor/enable", authLimit, smallBody, controllers.TwoFactorEnable)
+		authorized.POST("/account/two-factor/disable", authLimit, smallBody, controllers.TwoFactorDisable)
+		authorized.POST("/account/two-factor/recovery-codes", authLimit, smallBody, controllers.TwoFactorRecoveryCodes)
 		authorized.GET("/usage", controllers.Usage)
 		// API keys for programs (see /v1). Made and ended by a signed-in person; a key cannot make or end keys.
 		authorized.GET("/account/api-keys", controllers.ListAPIKeys)

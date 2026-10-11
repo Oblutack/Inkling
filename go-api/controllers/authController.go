@@ -48,6 +48,8 @@ func userView(u models.User) gin.H {
 	return gin.H{
 		"id": u.ID, "email": u.Email, "emailVerified": u.EmailVerified(), "hasPassword": u.HasPassword,
 		"customInstructions": u.CustomInstructions,
+		// whether signing in needs a code from an authenticator app too, and whether this server can offer that at all
+		"twoFactorEnabled": u.TwoFactorEnabled(), "twoFactorAvailable": auth.TwoFactorAvailable(),
 	}
 }
 
@@ -229,13 +231,7 @@ func Login(c *gin.Context) {
 		}
 	}
 
-	if err := startSession(c, user.ID); err != nil {
-		slog.Error("creating session failed", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start a session"})
-		return
-	}
-	securityEvent(c, "login", user.ID)
-	c.JSON(http.StatusOK, gin.H{"user": userView(user)})
+	startSessionOrChallenge(c, user, "login")
 }
 
 // Logout ends the current session. It is idempotent and works without a valid session, so a
@@ -316,13 +312,7 @@ func GoogleLogin(c *gin.Context) {
 		return
 	}
 
-	if err := startSession(c, user.ID); err != nil {
-		slog.Error("creating session failed", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start a session"})
-		return
-	}
-	securityEvent(c, "login_google", user.ID)
-	c.JSON(http.StatusOK, gin.H{"user": userView(*user)})
+	startSessionOrChallenge(c, *user, "login_google")
 }
 
 // FindOrCreateGoogleUser returns the account for a Google-verified email. A new account has no
