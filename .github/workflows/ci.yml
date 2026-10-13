@@ -37,7 +37,7 @@ jobs:
     env:
       TEST_DSN: host=localhost port=5432 user=user password=password dbname=summarizer_test sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           # An exact patch release: 1.27.2 fixes eleven standard-library vulnerabilities that 1.27.1 has, and
@@ -66,7 +66,7 @@ jobs:
       run:
         working-directory: python-ai-service
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
@@ -93,7 +93,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           version: 10
@@ -117,7 +117,7 @@ jobs:
   repo:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # the changelog reads the whole history
       - uses: actions/setup-python@v7
@@ -139,7 +139,7 @@ jobs:
   extension:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -209,7 +209,7 @@ jobs:
     env:
       E2E_DSN: host=localhost port=5432 user=user password=password dbname=summarizer_e2e sslmode=disable
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           # An exact patch release: 1.27.2 fixes eleven standard-library vulnerabilities that 1.27.1 has, and
