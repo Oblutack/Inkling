@@ -37,3 +37,6 @@ python-ai-service/evals/summary/results/
 dist/
 python-ai-service/evals/compare/results/
 python-ai-service/evals/extract/results/
+
+# Database backups made by scripts/backup-db.sh
+backups/
