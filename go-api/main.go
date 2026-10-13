@@ -1,10 +1,12 @@
 package main
 
 import (
+	"ai-summarizer/go-api/alerts"
 	"ai-summarizer/go-api/controllers"
 	"ai-summarizer/go-api/initializers"
 	"ai-summarizer/go-api/mailer"
 	"ai-summarizer/go-api/server"
+	"context"
 	"flag"
 	"net/http"
 	"os"
@@ -63,6 +65,10 @@ func main() {
 	if provider := strings.ToLower(os.Getenv("MAIL_PROVIDER")); provider == "" || provider == "log" {
 		logger.Warn("MAIL_PROVIDER is not set: emails are only written to the log, never sent")
 	}
+
+	// Alerts (many people at once, the AI budget used up, the AI service failing): emailed to ALERT_EMAIL when it is set,
+	// always written to the log.
+	alerts.Start(context.Background(), alerts.ConfigFromEnv(), m)
 
 	rates := server.DefaultRates
 	if v := os.Getenv("RATE_LIMIT_MULTIPLIER"); v != "" {

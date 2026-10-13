@@ -54,7 +54,7 @@ func (r Rates) Scaled(factor int) Rates {
 // every router (and every test) starts with full allowances.
 func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 	r := gin.New()
-	r.Use(middleware.RequestID(), middleware.AccessLog(logger), metrics.HTTP(), middleware.Recover(logger), middleware.SecurityHeaders())
+	r.Use(middleware.RequestID(), middleware.AccessLog(logger), metrics.HTTP(), middleware.Activity(), middleware.Recover(logger), middleware.SecurityHeaders())
 
 	// Client IPs drive the rate limits and the anonymous daily allowance. Behind a proxy such as Render, list its
 	// addresses in TRUSTED_PROXIES (comma separated CIDRs) so X-Forwarded-For is only believed from it. Without it no
