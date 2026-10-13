@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"ai-summarizer/go-api/alerts"
 	"ai-summarizer/go-api/metrics"
 	"ai-summarizer/go-api/middleware"
 	"ai-summarizer/go-api/models"
@@ -289,10 +290,12 @@ func callAIService(req *http.Request) ([]byte, *apiError) {
 	resp, err := aiHTTPClient.Do(req)
 	if err != nil {
 		metrics.AIRequest(req.URL.Path, "unavailable", time.Since(started))
+		alerts.Default.AIResult(true)
 		return nil, &apiError{http.StatusGatewayTimeout, "The AI service is unavailable or took too long to respond."}
 	}
 	defer func() { _ = resp.Body.Close() }()
 	metrics.AIRequest(req.URL.Path, aiOutcome(resp.StatusCode), time.Since(started))
+	alerts.Default.AIResult(aiFailed(resp.StatusCode))
 
 	// Summaries echo the source text back (to be stored for chat), so allow more than a summary needs.
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
@@ -307,6 +310,12 @@ func callAIService(req *http.Request) ([]byte, *apiError) {
 }
 
 // aiOutcome is the metrics label for an AI service reply.
+// aiFailed says whether a reply means the AI service is in trouble (a server error), as opposed to refusing what it was
+// sent (a 4xx, which is the caller's doing) or the busy answer (503 with its own message, which the service gives on purpose).
+func aiFailed(status int) bool {
+	return status >= http.StatusInternalServerError && status != http.StatusServiceUnavailable
+}
+
 func aiOutcome(status int) string {
 	if status == http.StatusOK {
 		return "ok"

@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"ai-summarizer/go-api/alerts"
 	"ai-summarizer/go-api/initializers"
 	"ai-summarizer/go-api/metrics"
 	"crypto/hmac"
@@ -147,6 +148,7 @@ func DailyBudget() gin.HandlerFunc {
 		}
 		if used == -1 {
 			metrics.QuotaRejected("budget")
+			alerts.Default.BudgetUsedUp(limit)
 			RefundQuota(c) // what this request claimed before reaching the budget (the person's allowance, a key's count)
 			c.Header("Retry-After", strconv.Itoa(secondsUntilUTCMidnight()))
 			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
@@ -157,6 +159,7 @@ func DailyBudget() gin.HandlerFunc {
 		}
 		if used == limit {
 			slog.Warn("daily AI budget used up: further AI work is paused until midnight UTC", "limit", limit)
+			alerts.Default.BudgetUsedUp(limit)
 		}
 		c.Set(budgetClaimKey, guardClaim{table: "global_usage", day: day})
 		c.Next()

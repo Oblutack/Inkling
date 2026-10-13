@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"ai-summarizer/go-api/alerts"
 	"ai-summarizer/go-api/metrics"
 	"ai-summarizer/go-api/middleware"
 	"bufio"
@@ -42,12 +43,14 @@ func streamSummary(c *gin.Context, ar *aiRequest, save bool, label string) {
 	resp, err := aiHTTPClient.Do(ar.req)
 	if err != nil {
 		metrics.AIRequest(ar.req.URL.Path, "unavailable", time.Since(started))
+		alerts.Default.AIResult(true)
 		middleware.RefundQuota(c)
 		(&apiError{http.StatusGatewayTimeout, "The AI service is unavailable or took too long to respond."}).send(c)
 		return
 	}
 	defer func() { _ = resp.Body.Close() }()
 	metrics.AIRequest(ar.req.URL.Path, aiOutcome(resp.StatusCode), time.Since(started))
+	alerts.Default.AIResult(aiFailed(resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
