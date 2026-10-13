@@ -416,9 +416,10 @@ def digit_numbers(text: str) -> list[str]:
     return [n.replace(",", "") for n in _DIGITS.findall(text)]
 
 
-def invents_numbers(text: str, change: Change) -> bool:
-    """Whether a sentence mentions a number that is in neither version of the change (a number it made up)."""
-    allowed = set(numbers(change.before)) | set(numbers(change.after))
+def invents_numbers(text: str, change: Change, names: str = "") -> bool:
+    """Whether a sentence mentions a number that is in neither version of the change (a number it made up). The names of
+    the two documents are in the prompt, so a number in a name ("v2", "Q3") is not made up when it is repeated."""
+    allowed = set(numbers(change.before)) | set(numbers(change.after)) | set(numbers(names))
     return any(n not in allowed for n in digit_numbers(text))
 
 
@@ -462,7 +463,7 @@ async def explain(changes: list[Change], old_name: str, new_name: str, language:
                 return  # the changes are all known; the rest are shown without an explanation
             for number, (importance, what, why) in parse_explanations(reply, todo).items():
                 change = by_id[number]
-                if invents_numbers(what + " " + why, change):
+                if invents_numbers(what + " " + why, change, f"{old_name} {new_name}"):
                     continue
                 change.importance, change.summary, change.impact, change.explained = importance, what, why, True
                 todo.discard(number)
@@ -538,7 +539,7 @@ async def compare_documents(
 
     bottom = plain_bottom_line(changes, old_name, new_name)
     if any(c.explained for c in changes):
-        known = set(numbers(" ".join(c.before + " " + c.after for c in changes)))
+        known = set(numbers(" ".join(c.before + " " + c.after for c in changes) + f" {old_name} {new_name}"))
         # A reply that is unusable (a number nobody wrote, far too long) is asked for once more before the program's own
         # sentence (which is in English whatever the language asked for) is used instead.
         for _ in range(BOTTOM_LINE_ATTEMPTS):

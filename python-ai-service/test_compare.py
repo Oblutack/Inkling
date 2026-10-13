@@ -441,6 +441,42 @@ def test_a_bottom_line_with_an_invented_number_is_replaced():
     assert "120" not in result["bottomLine"] and result["bottomLine"].startswith('Between "v1" and "v2"')
 
 
+def test_a_number_in_a_documents_name_is_not_an_invented_number():
+    # the names are in the prompt: "version 2" or "Q3" repeated back is not a number the model made up
+    class Naming(Model):
+        async def __call__(self, prompt):
+            if "Write the bottom line" in prompt:
+                return "Version v2 raises the payment time."
+            return await super().__call__(prompt)
+
+    result = run(compare.compare_documents("Contract v1", OLD, "Contract v2", NEW, None, Naming()))
+    assert result["bottomLine"] == "Version v2 raises the payment time."
+
+
+def test_an_explanation_may_repeat_a_number_from_a_documents_name_too():
+    class Naming(Model):
+        async def __call__(self, prompt):
+            if "Write the bottom line" in prompt:
+                return await super().__call__(prompt)
+            ids = [int(i) for i in re.findall(r"^\[(\d+)\] ", prompt, re.M)]
+            return chr(10).join(f"{i} | HIGH | Changed in v2. | It matters." for i in ids)
+
+    result = run(compare.compare_documents("Contract v1", OLD, "Contract v2", NEW, None, Naming()))
+    assert result["explained"] is True and all(c["summary"] == "Changed in v2." for c in result["changes"])
+
+    # but a number that is in no name and no version is still refused
+    class Inventing(Model):
+        async def __call__(self, prompt):
+            if "Write the bottom line" in prompt:
+                return await super().__call__(prompt)
+            ids = [int(i) for i in re.findall(r"^\[(\d+)\] ", prompt, re.M)]
+            return chr(10).join(f"{i} | HIGH | Changed to 777. | It matters." for i in ids)
+
+    assert (
+        run(compare.compare_documents("Contract v1", OLD, "Contract v2", NEW, None, Inventing()))["explained"] is False
+    )
+
+
 def test_an_unusable_bottom_line_is_asked_for_once_more():
     class SecondTime(Model):
         bottom_lines = 0
