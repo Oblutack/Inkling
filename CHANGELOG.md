@@ -9,6 +9,10 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Added
 
+- **api:** Alert when the AI budget runs out or the AI service fails
+- **api:** Count who is using the site and alert when it gets busy
+- **api:** Add alerts that email the owner, with a cooldown
+- **ops:** Add a database backup script that checks, encrypts and tidies
 - **extension:** Add a right-click entry that summarizes the selection
 - **extension:** Show the summary as it is written, with a Stop button
 - **ai-service:** Turn a page held at a slant level before reading it
@@ -136,6 +140,7 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Fixed
 
+- **ai-service:** Do not call a number in a document's name an invented number
 - **ai-service:** Treat the rest of a note to the model as suspect
 - **extension:** Open the add-on's pages from a page in the Firefox test
 - **extension:** Write the language names in the language of the texts
