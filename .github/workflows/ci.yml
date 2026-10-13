@@ -126,6 +126,7 @@ jobs:
       - run: pip install openapi-spec-validator==0.9.0 pyyaml==6.0.3
       - run: python scripts/validate_openapi.py
       - run: sh scripts/test-hooks.sh
+      - run: bash -n scripts/backup-db.sh && bash -n scripts/restore-check.sh
       - name: Build the changelog
         run: |
           python scripts/changelog.py -o "$RUNNER_TEMP/CHANGELOG.md"
