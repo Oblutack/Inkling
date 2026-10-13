@@ -62,6 +62,12 @@ services:
       - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-}
       - SENTRY_RELEASE=${SENTRY_RELEASE:-}
       - METRICS_TOKEN=${METRICS_TOKEN:-}
+      # Alerts to the owner by email (see .env.example): many people at once, the AI budget used up, the AI service failing.
+      - ALERT_EMAIL=${ALERT_EMAIL:-}
+      - ALERT_ACTIVE_USERS=${ALERT_ACTIVE_USERS:-10}
+      - ALERT_ACTIVE_USERS_HIGH=${ALERT_ACTIVE_USERS_HIGH:-25}
+      - ALERT_WINDOW_MINUTES=${ALERT_WINDOW_MINUTES:-5}
+      - ALERT_COOLDOWN_MINUTES=${ALERT_COOLDOWN_MINUTES:-60}
       # Sessions: plain-http local development needs non-Secure cookies. In production use
       # COOKIE_SECURE=true, and COOKIE_SAMESITE=none when the frontend and API are on different sites.
       - COOKIE_SECURE=${COOKIE_SECURE:-false}

@@ -99,3 +99,5 @@ services:
         value: production
       - key: METRICS_TOKEN
         sync: false # optional
+      - key: ALERT_EMAIL
+        sync: false # optional; where alerts (many people at once, AI budget used up, AI service failing) are emailed

@@ -331,6 +331,7 @@ Backend settings live in the root `.env` (see [`.env.example`](.env.example)); f
 | `STORED_FILES_MB_PER_USER` | `100` | Original data kept per user: PDFs for the viewer and recordings for playback. `0` keeps none; summaries and chat still work. |
 | `EMBEDDINGS`, `EMBEDDING_MODEL`, `EMBEDDING_MIN_SCORE` | `on`, `BAAI/bge-small-en-v1.5`, per model | Search by meaning (AI service). `EMBEDDINGS=off` switches it off and search is by keyword only, which saves about 200 MB of memory. A larger model such as `thenlper/gte-base` (a 440 MB download) finds more but needs correspondingly more memory. The score is the lowest similarity that still counts as related; the default is deliberately low. Changing the model re-embeds your passages gradually as questions are asked. |
 | `AI_SERVICE_TOKEN` | empty | Shared secret between the Go API and the AI service (same value on both). Required when the AI service is reachable from the internet. |
+| `ALERT_EMAIL`, `ALERT_ACTIVE_USERS`, `ALERT_ACTIVE_USERS_HIGH`, `ALERT_WINDOW_MINUTES`, `ALERT_COOLDOWN_MINUTES` | empty (log only), `10`, `25`, `5`, `60` | Alerts to the owner: an email to `ALERT_EMAIL` (through `MAIL_PROVIDER`) when that many different people have made a request within the window, when the day's AI budget is used up, or when the AI service keeps failing. A level of `0` is off; the same alert is not repeated within the cooldown. The email holds a number and a time, nothing about anyone. Always written to the log too. |
 | `METRICS_TOKEN` | empty (off) | Switches on `GET /metrics` on both backends, for callers sending `Authorization: Bearer <token>`. |
 | `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_RELEASE` | empty (off) | Opt-in error reporting. Only errors and stack traces are sent: no request bodies, cookies or documents. |
 | `LOG_FORMAT`, `LOG_LEVEL` | `json`, `info` | Structured logging. `LOG_FORMAT=text` is easier to read locally. |
@@ -359,6 +360,7 @@ Both backends expose Prometheus metrics at `/metrics`. The endpoint is **off unl
 | Metric family | Answers |
 | --- | --- |
 | `http_requests_total`, `http_request_duration_seconds` | Traffic, error rate and latency per route (route patterns only, so label cardinality stays bounded) |
+| `active_users` | Different visitors who made a request in the last few minutes (the number the alerts watch) |
 | `ai_service_requests_total`, `ai_service_response_seconds` | How the Go API sees the AI service |
 | `llm_requests_total`, `llm_request_duration_seconds` | Model calls by outcome (`ok`, `provider_error`, `model_missing`, `circuit_open`, `cancelled`) and latency |
 | `llm_tokens_total` | Prompt and completion tokens, for cost tracking |
