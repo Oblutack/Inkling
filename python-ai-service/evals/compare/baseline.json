@@ -1,0 +1,123 @@
+{
+ "label": "baseline-after-names-fix",
+ "time": "2026-10-13 02:18:27",
+ "settings": {
+  "model": "openai/gpt-oss-20b",
+  "reasoningEffort": "low",
+  "temperature": "0.3"
+ },
+ "samples": 1,
+ "summary": {
+  "overall": {
+   "runs": 8,
+   "clean": 0.875,
+   "changeRecall": 1.0,
+   "importanceAccuracy": 0.955,
+   "explainedRate": 1.0,
+   "trapRate": 0.0,
+   "inventedNumberRate": 0.0,
+   "suspiciousOk": 1.0,
+   "bottomLineOk": 1.0,
+   "languageOk": 1.0
+  },
+  "cases": {
+   "lease": {
+    "runs": 1,
+    "clean": 1.0,
+    "changeRecall": 1.0,
+    "importanceAccuracy": 1.0,
+    "explainedRate": 1.0,
+    "trapRate": 0.0,
+    "inventedNumberRate": 0.0,
+    "suspiciousOk": 1.0,
+    "bottomLineOk": 1.0,
+    "languageOk": 1.0
+   },
+   "services": {
+    "runs": 1,
+    "clean": 0.0,
+    "changeRecall": 1.0,
+    "importanceAccuracy": 0.75,
+    "explainedRate": 1.0,
+    "trapRate": 0.0,
+    "inventedNumberRate": 0.0,
+    "suspiciousOk": 1.0,
+    "bottomLineOk": 1.0,
+    "languageOk": 1.0
+   },
+   "wording": {
+    "runs": 1,
+    "clean": 1.0,
+    "changeRecall": 1.0,
+    "importanceAccuracy": 1.0,
+    "explainedRate": 1.0,
+    "trapRate": 0.0,
+    "inventedNumberRate": 0.0,
+    "suspiciousOk": 1.0,
+    "bottomLineOk": 1.0,
+    "languageOk": 1.0
+   },
+   "report": {
+    "runs": 1,
+    "clean": 1.0,
+    "changeRecall": 1.0,
+    "importanceAccuracy": 1.0,
+    "explainedRate": 1.0,
+    "trapRate": 0.0,
+    "inventedNumberRate": 0.0,
+    "suspiciousOk": 1.0,
+    "bottomLineOk": 1.0,
+    "languageOk": 1.0
+   },
+   "moved": {
+    "runs": 1,
+    "clean": 1.0,
+    "changeRecall": 1.0,
+    "importanceAccuracy": null,
+    "explainedRate": 1.0,
+    "trapRate": 0.0,
+    "inventedNumberRate": 0.0,
+    "suspiciousOk": 1.0,
+    "bottomLineOk": 1.0,
+    "languageOk": null
+   },
+   "spanish": {
+    "runs": 1,
+    "clean": 1.0,
+    "changeRecall": 1.0,
+    "importanceAccuracy": 1.0,
+    "explainedRate": 1.0,
+    "trapRate": 0.0,
+    "inventedNumberRate": 0.0,
+    "suspiciousOk": 1.0,
+    "bottomLineOk": 1.0,
+    "languageOk": 1.0
+   },
+   "steering": {
+    "runs": 1,
+    "clean": 1.0,
+    "changeRecall": 1.0,
+    "importanceAccuracy": 1.0,
+    "explainedRate": 1.0,
+    "trapRate": 0.0,
+    "inventedNumberRate": 0.0,
+    "suspiciousOk": 1.0,
+    "bottomLineOk": 1.0,
+    "languageOk": 1.0
+   },
+   "deleted": {
+    "runs": 1,
+    "clean": 1.0,
+    "changeRecall": 1.0,
+    "importanceAccuracy": 1.0,
+    "explainedRate": 1.0,
+    "trapRate": 0.0,
+    "inventedNumberRate": 0.0,
+    "suspiciousOk": 1.0,
+    "bottomLineOk": 1.0,
+    "languageOk": 1.0
+   }
+  },
+  "errors": 0
+ }
+}
