@@ -12,7 +12,7 @@ const (
 	defaultLanguage = "English"
 )
 
-var summaryStyles = []string{"default", "bullets", "brief", "simple", "takeaways"}
+var summaryStyles = []string{"default", "bullets", "brief", "simple", "takeaways", "glance"}
 
 var summaryLanguages = []string{
 	"English", "Spanish", "French", "German", "Italian", "Portuguese", "Dutch", "Polish",

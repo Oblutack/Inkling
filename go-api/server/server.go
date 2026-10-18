@@ -158,6 +158,7 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		v1.POST("/summarize-url", summarizeUserLimit, smallBody, summaries, keyDaily, dailyBudget, controllers.APISummarizeURL)
 		v1.POST("/compare", summarizeUserLimit, compareBody, summaries, keyDaily, dailyBudget, controllers.APICompare)
 		v1.POST("/extract", summarizeUserLimit, extractBody, summaries, keyDaily, dailyBudget, controllers.APIExtract)
+		v1.POST("/reading-list", summarizeUserLimit, textBody, summaries, keyDaily, dailyBudget, controllers.SaveForLater)
 		v1.GET("/usage", controllers.APIUsage)
 	}
 
@@ -205,6 +206,13 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		authorized.POST("/documents/:id/cards/review", reviewLimit, smallBody, controllers.RateCard)
 		authorized.GET("/documents/:id/cards/progress", reviewLimit, controllers.CardProgress)
 		authorized.GET("/study/due", reviewLimit, controllers.DueCards)
+		authorized.GET("/exams/sources", reviewLimit, controllers.ExamSources)
+		authorized.GET("/reading-list", reviewLimit, controllers.ReadingList)
+		authorized.PUT("/reading-list/:id", reviewLimit, smallBody, controllers.UpdateReadingItem)
+		authorized.DELETE("/reading-list/:id", reviewLimit, controllers.RemoveReadingItem)
+		authorized.POST("/exams", reviewLimit, smallBody, controllers.DrawExam)
+		authorized.POST("/exams/results", reviewLimit, smallBody, controllers.RecordExam)
+		authorized.GET("/exams/results", reviewLimit, controllers.ExamHistory)
 		authorized.GET("/study/stats", reviewLimit, controllers.StudyStats)
 
 		// Watched pages: opened now and then, and the person is told when something that matters changed.
@@ -243,6 +251,7 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		verified.POST("/documents/:id/dates", chatUserLimit, dailyBudget, controllers.FindDocumentDates)
 		verified.POST("/documents/:id/study", chatUserLimit, smallBody, controllers.ReplayStoredStudy, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.StudyDocument)
 		// A document read only to be studied: no summary is made, the flashcards are, and the document is saved with them.
+		verified.POST("/reading-list", summarizeUserLimit, textBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.SaveForLater)
 		verified.POST("/study-sets/text", summarizeUserLimit, textBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.CreateStudySetText)
 		verified.POST("/study-sets/url", summarizeUserLimit, smallBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.CreateStudySetURL)
 		verified.POST("/study-sets/files", summarizeUserLimit, combinedBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.CreateStudySetFiles)

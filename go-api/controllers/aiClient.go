@@ -183,6 +183,9 @@ type summaryOptions struct {
 	Language string
 	// Instructions are the signed-in user's standing preferences; empty for anonymous summaries.
 	Instructions string
+	// SkimChars, when set, is how much of the start of a long text is summarized (a few lines for the reading list); the
+	// whole text is still kept. 0 means all of it.
+	SkimChars int
 }
 
 // maxInstructionRunes is the longest set of standing preferences a user can keep.
@@ -251,7 +254,23 @@ func (o summaryOptions) fields() map[string]string {
 	if o.Instructions != "" {
 		fields["instructions"] = o.Instructions
 	}
+	if o.SkimChars > 0 {
+		fields["skim_chars"] = strconv.Itoa(o.SkimChars)
+	}
 	return fields
+}
+
+// skimKey is where a handler says that only the start of a long text is to be summarized (see summaryOptions.SkimChars).
+const skimKey = "summarySkimChars"
+
+// skimCharsOf is how much of a text the handler wants summarized, or 0 for all of it.
+func skimCharsOf(c *gin.Context) int {
+	if v, ok := c.Get(skimKey); ok {
+		if n, ok := v.(int); ok {
+			return n
+		}
+	}
+	return 0
 }
 
 // prepareAIRequest adds what the AI service expects on every call from the gateway: the request id,
@@ -506,6 +525,7 @@ func buildURLRequest(c *gin.Context, stream bool) (*aiRequest, *apiError) {
 		return nil, perr
 	}
 	opts.Instructions = instructionsOf(c)
+	opts.SkimChars = skimCharsOf(c)
 
 	address, apiErr := webAddressOf(c)
 	if apiErr != nil {
@@ -563,6 +583,7 @@ func buildTextRequest(c *gin.Context, stream bool) (*aiRequest, *apiError) {
 		return nil, perr
 	}
 	opts.Instructions = instructionsOf(c)
+	opts.SkimChars = skimCharsOf(c)
 
 	var payload TextPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {
