@@ -71,8 +71,8 @@ func main() {
 	// always written to the log.
 	alerts.Start(context.Background(), alerts.ConfigFromEnv(), m)
 
-	// Scheduled work: the daily flashcard reminder (for people who switched it on). JOBS_ENABLED=false turns it off.
-	jobs.Start(context.Background(), jobs.StudyReminders(m))
+	// Scheduled work: the daily flashcard reminder (for people who switched it on) and the check of watched pages. JOBS_ENABLED=false turns it off.
+	jobs.Start(context.Background(), jobs.StudyReminders(m), controllers.PageWatches(m))
 
 	rates := server.DefaultRates
 	if v := os.Getenv("RATE_LIMIT_MULTIPLIER"); v != "" {

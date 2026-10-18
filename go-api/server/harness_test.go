@@ -121,6 +121,19 @@ type fakeAI struct {
 	studyCalls   atomic.Int32
 	// lastStudy is the most recent /study request body, to see what the model was given to make cards from.
 	lastStudy atomic.Value
+	// The page a link opens (/read-url): readText is its text (a short default when empty), readFail makes it unreadable,
+	// readCalls counts the opens and lastReadQuery is the query of the latest (to see that a watch asked for the robots check).
+	// compareFail makes /compare fail, compareCalls counts its calls.
+	readText      atomic.Value
+	readFail      atomic.Bool
+	readCalls     atomic.Int32
+	lastReadQuery atomic.Value
+	compareFail   atomic.Bool
+	compareCalls  atomic.Int32
+	// datesCalls counts /dates calls, datesReply (when set) replaces its answer, lastDates is the latest request body.
+	datesCalls atomic.Int32
+	datesReply atomic.Value
+	lastDates  atomic.Value
 }
 
 // meaningOf stands in for an embedding model: words of the same group ("cat", "dog", "pet") share a
@@ -266,7 +279,18 @@ func (f *fakeAI) handler(w http.ResponseWriter, r *http.Request) {
 	case "/read":
 		_, _ = w.Write([]byte(`{"filename":"notes.pdf","text":"the uploaded text"}`))
 	case "/read-url":
-		_, _ = w.Write([]byte(`{"filename":"Fake Page Title","text":"the page text"}`))
+		f.readCalls.Add(1)
+		f.lastReadQuery.Store(r.URL.RawQuery)
+		if f.readFail.Load() {
+			w.WriteHeader(http.StatusUnprocessableEntity)
+			_, _ = w.Write([]byte(`{"detail":"That page was not found (it may have moved or been removed)."}`))
+			return
+		}
+		text := "the page text"
+		if v, _ := f.readText.Load().(string); v != "" {
+			text = v
+		}
+		_ = json.NewEncoder(w).Encode(map[string]string{"filename": "Fake Page Title", "text": text})
 	case "/study":
 		raw, _ := io.ReadAll(r.Body)
 		f.lastStudy.Store(raw)
@@ -301,7 +325,25 @@ func (f *fakeAI) handler(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"name": "doc", "fields": results, "suspicious": false})
+	case "/dates":
+		f.datesCalls.Add(1)
+		raw, _ := io.ReadAll(r.Body)
+		f.lastDates.Store(raw)
+		if override, _ := f.datesReply.Load().(string); override != "" {
+			_, _ = w.Write([]byte(override))
+			return
+		}
+		_, _ = w.Write([]byte(`{"dates":[` +
+			`{"what":"Lease ends","date":"2027-02-28","repeat":"none","relative":"","quote":"The lease ends on 28 February 2027.","page":null,"verified":true,"reason":""},` +
+			`{"what":"Rent is due","date":null,"repeat":"monthly","relative":"the first day of each month","quote":"Rent is due on the first day of each month.","page":1,"verified":true,"reason":""}` +
+			`],"suspicious":false,"sentences":2}`))
 	case "/compare":
+		f.compareCalls.Add(1)
+		if f.compareFail.Load() {
+			w.WriteHeader(http.StatusBadGateway)
+			_, _ = w.Write([]byte(`{"detail":"The language model is unavailable."}`))
+			return
+		}
 		raw, _ := io.ReadAll(r.Body)
 		f.lastCompare.Store(raw)
 		if override, _ := f.compareReply.Load().(string); override != "" {

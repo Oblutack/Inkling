@@ -87,6 +87,21 @@ func ExportAccount(c *gin.Context) {
 	reviewDays := []reviewDay{}
 	initializers.DB.Raw(`SELECT day::text AS day, count FROM review_days WHERE user_id = ? ORDER BY day`, user.ID).Scan(&reviewDays)
 	emailPrefs, _ := notices.PrefsOf(user.ID)
+	// The pages the person watches (their text is not exported, only what identifies them and how they are checked).
+	type watchExport struct {
+		URL           string     `json:"url"`
+		Title         string     `json:"title"`
+		EveryHours    int        `json:"everyHours"`
+		Paused        bool       `json:"paused"`
+		LastCheckedAt *time.Time `json:"lastCheckedAt"`
+		LastChangedAt *time.Time `json:"lastChangedAt"`
+		CreatedAt     time.Time  `json:"createdAt"`
+		Changes       int        `json:"changes"`
+	}
+	watchRows := []watchExport{}
+	initializers.DB.Raw(`SELECT w.url, w.title, w.every_hours, w.paused, w.last_checked_at, w.last_changed_at, w.created_at,
+		(SELECT count(*) FROM watch_changes c WHERE c.watch_id = w.id) AS changes
+		FROM page_watches w WHERE w.user_id = ? ORDER BY w.id`, user.ID).Scan(&watchRows)
 
 	// The keys themselves are never kept, so the export lists what is: their names, when they were made and last used.
 	keyRecords, _ := auth.APIKeysOf(user.ID)
@@ -106,6 +121,7 @@ func ExportAccount(c *gin.Context) {
 		"usage":            usage,
 		"studyProgress":    gin.H{"cards": cardRows, "days": reviewDays},
 		"emailPreferences": emailPrefs,
+		"watchedPages":     watchRows,
 	})
 }
 

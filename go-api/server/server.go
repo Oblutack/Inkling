@@ -207,6 +207,13 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		authorized.GET("/study/due", reviewLimit, controllers.DueCards)
 		authorized.GET("/study/stats", reviewLimit, controllers.StudyStats)
 
+		// Watched pages: opened now and then, and the person is told when something that matters changed.
+		authorized.GET("/watches", controllers.ListWatches)
+		authorized.PUT("/watches/:id", smallBody, controllers.UpdateWatch)
+		authorized.DELETE("/watches/:id", controllers.DeleteWatch)
+		authorized.GET("/watches/:id/changes", controllers.WatchChanges)
+		authorized.GET("/watches/:id/changes/:changeId", controllers.WatchChange)
+
 		// Saved documents.
 		authorized.GET("/documents", controllers.ListDocuments)
 		authorized.GET("/documents/tags", controllers.ListTags)
@@ -216,6 +223,7 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		authorized.DELETE("/documents/:id/share", controllers.UnshareDocument)
 		authorized.GET("/documents/:id/files/:fileId", controllers.DocumentFile)
 		authorized.GET("/documents/:id/text", controllers.DocumentText)
+		authorized.GET("/documents/:id/dates", controllers.DocumentDates)
 		authorized.POST("/documents/:id/proof", proofUserLimit, controllers.CheckDocumentSummary)
 
 		// Work that costs an LLM call: signed in (and verified, when required), rate limited, then
@@ -232,11 +240,15 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		verified.POST("/documents/:id/podcast", chatUserLimit, smallBody, controllers.ReplayStoredPodcast, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.PodcastDocument)
 		verified.POST("/documents/:id/rewrite", summarizeUserLimit, smallBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.RewriteDocument)
 		verified.POST("/documents/:id/suggestions", chatUserLimit, dailyBudget, controllers.SuggestQuestions)
+		verified.POST("/documents/:id/dates", chatUserLimit, dailyBudget, controllers.FindDocumentDates)
 		verified.POST("/documents/:id/study", chatUserLimit, smallBody, controllers.ReplayStoredStudy, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.StudyDocument)
 		// A document read only to be studied: no summary is made, the flashcards are, and the document is saved with them.
 		verified.POST("/study-sets/text", summarizeUserLimit, textBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.CreateStudySetText)
 		verified.POST("/study-sets/url", summarizeUserLimit, smallBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.CreateStudySetURL)
 		verified.POST("/study-sets/files", summarizeUserLimit, combinedBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.CreateStudySetFiles)
+		// Starting to watch a page, and checking it now, open the page: signed in and confirmed, and at the pace of a summary.
+		verified.POST("/watches", summarizeUserLimit, smallBody, controllers.CreateWatch)
+		verified.POST("/watches/:id/check", summarizeUserLimit, controllers.CheckWatchNow)
 		verified.POST("/documents/:id/email", emailLimit, controllers.EmailDocument)
 		verified.POST("/library/ask", chatUserLimit, chatBody, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.AskLibrary)
 	}
