@@ -9,6 +9,10 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Added
 
+- **web:** A Study mode in the dashboard form and study set cards
+- **web:** Flashcard export helpers and the study mode texts
+- **api:** Make study sets from text, links and files
+- **ai:** Study a document from its text, with no summary needed
 - **api:** Alert when the AI budget runs out or the AI service fails
 - **api:** Count who is using the site and alert when it gets busy
 - **api:** Add alerts that email the owner, with a cooldown
@@ -135,6 +139,7 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Changed
 
+- **api:** Share the upload and web address checks
 - **go-api:** Run migrations and structured logging at startup
 - **frontend:** Share markdown and PDF export helpers
 
