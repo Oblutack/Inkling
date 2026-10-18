@@ -20,7 +20,9 @@ import PodcastPlayer from "./PodcastPlayer";
 import ProofView from "./ProofView";
 import ReadAloudPlayer, { ReadAloudToggle } from "./ReadAloudPlayer";
 import ComparePanel from "./ComparePanel";
+import DatesPanel from "./DatesPanel";
 import ExtractPanel from "./ExtractPanel";
+import MindMap from "./MindMap";
 import RewritePanel from "./RewritePanel";
 import ShareControl from "./ShareControl";
 import StudyPanel from "./StudyPanel";
@@ -69,10 +71,12 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
   };
   const [chatOpen, setChatOpen] = useState(false);
   const [podcastOpen, setPodcastOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [studyOpen, setStudyOpen] = useState(studySet || openStudy);
   const [rewriteOpen, setRewriteOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
+  const [datesOpen, setDatesOpen] = useState(false);
   // The quieter actions (export, email, share, rewrite) stay tucked away, unless there is a link to show.
   const [moreOpen, setMoreOpen] = useState(Boolean(doc.shareToken));
   const [textOpen, setTextOpen] = useState(false);
@@ -327,6 +331,9 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
               <button type="button" onClick={() => setPodcastOpen((open) => !open)} className={actionButton}>
                 {podcastOpen ? t("doc.closePodcast") : t("doc.podcast")}
               </button>
+              <button type="button" onClick={() => setMapOpen((open) => !open)} className={actionButton} aria-expanded={mapOpen}>
+                {mapOpen ? t("map.close") : t("map.open")}
+              </button>
             </>
           )}
           <button type="button" onClick={() => setChatOpen((open) => !open)} className={actionButton}>
@@ -383,6 +390,11 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
                 {extractOpen ? t("extract.close") : t("extract.open")}
               </button>
             )}
+            {doc.hasContent && (
+              <button type="button" onClick={() => setDatesOpen((open) => !open)} className={textButton} aria-expanded={datesOpen}>
+                {datesOpen ? t("dates.close") : t("dates.open")}
+              </button>
+            )}
             {recordingFile && (
               <button type="button" onClick={() => setRecordingOpen((open) => !open)} className={textButton} aria-expanded={recordingOpen}>
                 {recordingOpen ? t("doc.hideRecording") : t("doc.playRecording")}
@@ -403,9 +415,13 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
       {rewriteOpen && <RewritePanel documentId={doc.ID} onDone={summaryChanged} first={studySet} />}
       {compareOpen && doc.hasContent && <ComparePanel doc={doc} />}
       {extractOpen && doc.hasContent && <ExtractPanel doc={doc} />}
+      {datesOpen && doc.hasContent && <DatesPanel doc={doc} />}
       {textOpen && doc.hasContent && !recordingFile && <OriginalText documentId={doc.ID} transcript={transcript} />}
       {recordingOpen && recordingFile && <RecordingPanel documentId={doc.ID} file={recordingFile} seek={playAt} />}
       {podcastOpen && <PodcastPlayer documentId={doc.ID} />}
+      {mapOpen && !studySet && (
+        <MindMap doc={doc} files={pdfFiles} onOpenDocument={(file, passage) => setViewing({ file, page: passage.page ?? 1, passage: passage.text })} />
+      )}
       {chatOpen && <DocumentChat documentId={doc.ID} files={pdfFiles} prefill={prefill} onPlayAt={recordingFile ? playFrom : undefined} />}
       {studyOpen && <StudyPanel documentId={doc.ID} title={doc.Filename} autoStart={openStudy} />}
 

@@ -209,6 +209,7 @@ export default function DashboardPage() {
         <EInkForm
           endpoint={`${API_URL}/summarize`}
           onSummaryCreated={fetchDocuments}
+          onWatchCreated={() => router.push("/watches?added=1")}
           onStudySetCreated={(id) => {
             setNewStudySet(id);
             void fetchDocuments();
