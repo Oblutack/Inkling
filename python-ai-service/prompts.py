@@ -19,6 +19,10 @@ STYLE_INSTRUCTIONS = {
         "Explain it in plain language a curious 12-year-old could follow: short sentences, "
         "everyday words, no jargon (explain any unavoidable term briefly)."
     ),
+    "glance": (
+        "Write one plain paragraph of two or three sentences that says what this is and what matters most. "
+        "No headings, no bullet points, no bold text, no lists."
+    ),
     "takeaways": (
         "Write '## Key Takeaways' as a numbered list, then '## Action Items' as a bullet list "
         "of concrete next steps. If the text has no action items, write 'None'."

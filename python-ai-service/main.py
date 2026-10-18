@@ -363,6 +363,12 @@ def validate_options(word_count: int, page_limit: int, style: str, language: str
         raise HTTPException(422, "Unsupported language")
 
 
+def skim(text: str, skim_chars: int) -> str:
+    """What is summarized when only a skim is wanted (a few lines for a reading list): the start of a long text. The
+    whole text is still kept and returned; a long page would otherwise take dozens of model calls for three lines."""
+    return text[:skim_chars] if 0 < skim_chars < len(text) else text
+
+
 def extract_pdf_text(path: str) -> str:
     # Page breaks are kept (as form feeds) so chat answers can cite the page they came from.
     return PAGE_BREAK.join(page.extract_text() or "" for page in PdfReader(path).pages)
@@ -657,22 +663,24 @@ async def summarize_text(
     style: str = Query(DEFAULT_STYLE),
     language: str = Query(DEFAULT_LANGUAGE),
     instructions: str = Query(""),
+    skim_chars: int = Query(0, ge=0, le=MAX_TEXT_CHARS),
     stream: bool = Query(False),
 ):
     validate_options(word_count, page_limit, style, language, instructions)
     check_text(payload.text)
+    wanted = skim(payload.text, skim_chars)
 
     if stream:
 
         def prepare(progress):
             return prepare_summary_prompt(
-                payload.text, word_count, page_limit, style, language, progress, instructions=instructions
+                wanted, word_count, page_limit, style, language, progress, instructions=instructions
             )
 
-        key = text_cache_key(payload.text, word_count, page_limit, style, language, instructions)
+        key = text_cache_key(wanted, word_count, page_limit, style, language, instructions)
         return sse_response(summary_event_stream(prepare, None, key))
 
-    summary = await summarize_or_fail(payload.text, word_count, page_limit, style, language, instructions)
+    summary = await summarize_or_fail(wanted, word_count, page_limit, style, language, instructions)
     return {"summary": summary}
 
 
@@ -689,25 +697,27 @@ async def summarize_url(
     language: str = Query(DEFAULT_LANGUAGE),
     instructions: str = Query(""),
     ocr_pages: bool = Query(False, alias="ocr"),
+    skim_chars: int = Query(0, ge=0, le=MAX_TEXT_CHARS),
     stream: bool = Query(False),
 ):
     """Summarizes the page at a web address. The page is read first (so a bad address is a plain error, not
-    a failed stream), then summarized like any other text."""
+    a failed stream), then summarized like any other text (only its start, with skim_chars)."""
     validate_options(word_count, page_limit, style, language, instructions)
     title, text = await read_web_page(payload.url, ocr_pages)
     check_text(text)
+    wanted = skim(text, skim_chars)
 
     if stream:
 
         def prepare(progress):
             return prepare_summary_prompt(
-                text, word_count, page_limit, style, language, progress, instructions=instructions
+                wanted, word_count, page_limit, style, language, progress, instructions=instructions
             )
 
-        key = text_cache_key(text, word_count, page_limit, style, language, instructions)
+        key = text_cache_key(wanted, word_count, page_limit, style, language, instructions)
         return sse_response(summary_event_stream(prepare, {"filename": title, "text": text}, key))
 
-    summary = await summarize_or_fail(text, word_count, page_limit, style, language, instructions)
+    summary = await summarize_or_fail(wanted, word_count, page_limit, style, language, instructions)
     return {"filename": title, "summary": summary, "text": text}
 
 

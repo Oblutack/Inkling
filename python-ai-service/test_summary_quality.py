@@ -319,3 +319,20 @@ def test_a_per_quarter_list_of_risks_is_not_a_shared_risk():
         "All documents highlight infrastructure costs.",
     ):
         assert "a shared risk that is not shared" in score(overview, wrong).traps_hit, wrong
+
+
+def test_a_glance_is_one_plain_paragraph():
+    from summary_quality import format_problems
+
+    assert (
+        format_problems("This is a lease for a flat. Rent is 950 euros a month and notice is 60 days.", "glance") == []
+    )
+    for text in ("## Overview\nA lease.", "- Rent is 950 euros.\n- Notice is 60 days.", "A lease with **bold** rent."):
+        assert "not one plain paragraph" in format_problems(text, "glance"), text
+
+
+def test_the_glance_style_is_asked_for_in_plain_words():
+    import prompts
+
+    assert prompts.is_valid_style("glance")
+    assert "two or three sentences" in prompts.STYLE_INSTRUCTIONS["glance"]

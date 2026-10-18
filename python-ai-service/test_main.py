@@ -302,3 +302,34 @@ def test_the_same_language_option_follows_the_text_and_is_accepted_by_the_summar
     r = client.post("/summarize-text", params={"language": SAME_LANGUAGE}, json={"text": "hello"})
     assert r.status_code == 200
     assert client.post("/summarize-text?language=Klingon", json={"text": "hello"}).status_code == 422
+
+
+def test_a_skim_summarizes_only_the_start_of_a_long_text_but_returns_all_of_it(llm, client, monkeypatch):
+    text = "word " * 30_000  # far more than one model call can take (150,000 characters)
+    whole = client.post("/summarize-text", params={"word_count": 60}, json={"text": text})
+    assert whole.status_code == 200 and len(llm.prompts) > 3
+
+    llm.prompts.clear()
+    skimmed = client.post("/summarize-text", params={"word_count": 60, "skim_chars": 12_000}, json={"text": text})
+    assert skimmed.status_code == 200 and skimmed.json() == {"summary": "summary"}
+    assert len(llm.prompts) == 1, "a skim of the start is one call"
+    assert text[:12_000].strip() in llm.prompts[0] and text[:13_000] not in llm.prompts[0]
+
+    async def page(url, ocr_pages):
+        return "A long page", text
+
+    monkeypatch.setattr(main, "read_web_page", page)
+    llm.prompts.clear()
+    reply = client.post(
+        "/summarize-url", params={"word_count": 70, "skim_chars": 12_000}, json={"url": "https://x.example/long"}
+    )
+    assert reply.status_code == 200 and len(llm.prompts) == 1
+    assert reply.json()["text"] == text, "the whole text is kept, for chat and study"
+
+
+def test_a_skim_longer_than_the_text_changes_nothing(llm, client):
+    reply = client.post(
+        "/summarize-text", params={"word_count": 60, "skim_chars": 50_000}, json={"text": "A short text."}
+    )
+    assert reply.status_code == 200 and len(llm.prompts) == 1 and "A short text." in llm.prompts[0]
+    assert client.post("/summarize-text", params={"skim_chars": -1}, json={"text": "x"}).status_code == 422

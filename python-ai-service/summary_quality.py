@@ -182,6 +182,9 @@ def format_problems(summary: str, style: str) -> list[str]:
         for section in ("overview", "key points", "implications"):
             if section not in lowered:
                 problems.append(f"missing section: {section}")
+    elif style == "glance":
+        if headings or any(_BULLET_LINE.match(line) for line in lines) or "**" in summary:
+            problems.append("not one plain paragraph")
     elif style == "takeaways":
         for section in ("key takeaways", "action items"):
             if section not in lowered:
