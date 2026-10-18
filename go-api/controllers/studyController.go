@@ -77,6 +77,55 @@ func materialFor(document models.Document) gin.H {
 	return gin.H{"summary": document.Summary, "text": text}
 }
 
+// hasStudySource says whether the model has something to work from: the summary or, when a document has none (one
+// read only to be studied), its text, provided that is short enough to be given whole.
+func hasStudySource(document models.Document) bool {
+	if strings.TrimSpace(document.Summary) != "" {
+		return true
+	}
+	return document.HasContent && strings.TrimSpace(document.Content) != "" && utf8.RuneCountInString(document.Content) <= studyFullTextMax
+}
+
+// makeStudyMaterial asks the AI service for flashcards or a quiz about a document. It returns what to keep (as JSON) and
+// what to answer with. The reply is cleaned first, so only well-formed cards and questions are ever kept or shown.
+func makeStudyMaterial(c *gin.Context, document models.Document, kind string) ([]byte, gin.H, *apiError) {
+	payload := materialFor(document)
+	payload["kind"] = kind
+	respBody, apiErr := postToAI(c, "/study", payload)
+	if apiErr != nil {
+		return nil, nil, apiErr
+	}
+	switch kind {
+	case kindFlashcards:
+		var out struct {
+			Cards []studyCard `json:"cards"`
+		}
+		if err := json.Unmarshal(respBody, &out); err != nil {
+			return nil, nil, &apiError{http.StatusBadGateway, "The AI service returned unreadable flashcards."}
+		}
+		cards := cleanCards(out.Cards)
+		if len(cards) < minCards {
+			return nil, nil, &apiError{http.StatusBadGateway, "The AI service returned too few flashcards."}
+		}
+		stored, _ := json.Marshal(cards)
+		return stored, gin.H{"kind": kindFlashcards, "cards": cards}, nil
+	case kindQuiz:
+		var out struct {
+			Questions []quizQuestion `json:"questions"`
+		}
+		if err := json.Unmarshal(respBody, &out); err != nil {
+			return nil, nil, &apiError{http.StatusBadGateway, "The AI service returned an unreadable quiz."}
+		}
+		questions := cleanQuiz(out.Questions)
+		if len(questions) < minQuizQuestions {
+			return nil, nil, &apiError{http.StatusBadGateway, "The AI service returned too few quiz questions."}
+		}
+		stored, _ := json.Marshal(questions)
+		return stored, gin.H{"kind": kindQuiz, "questions": questions}, nil
+	}
+	return nil, nil, &apiError{http.StatusBadRequest, "Choose flashcards or quiz."}
+}
+
 // ---- suggested questions -----------------------------------------------------------------------------
 
 // SuggestQuestions returns questions worth asking about a document, writing them first if needed.
@@ -99,7 +148,7 @@ func SuggestQuestions(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"questions": stored})
 		return
 	}
-	if strings.TrimSpace(document.Summary) == "" {
+	if !hasStudySource(document) {
 		middleware.RefundQuota(c)
 		c.JSON(http.StatusConflict, gin.H{"error": "This document has no summary to suggest questions from."})
 		return
@@ -224,58 +273,17 @@ func StudyDocument(c *gin.Context) {
 		middleware.RefundQuota(c)
 		return
 	}
-	if strings.TrimSpace(document.Summary) == "" {
+	if !hasStudySource(document) {
 		middleware.RefundQuota(c)
 		c.JSON(http.StatusConflict, gin.H{"error": "This document has no summary to study from."})
 		return
 	}
 
-	payload := materialFor(document)
-	payload["kind"] = body.Kind
-	respBody, apiErr := postToAI(c, "/study", payload)
+	stored, response, apiErr := makeStudyMaterial(c, document, body.Kind)
 	if apiErr != nil {
 		middleware.RefundQuota(c)
 		apiErr.send(c)
 		return
-	}
-
-	var stored []byte
-	var response gin.H
-	switch body.Kind {
-	case kindFlashcards:
-		var out struct {
-			Cards []studyCard `json:"cards"`
-		}
-		if err := json.Unmarshal(respBody, &out); err != nil {
-			middleware.RefundQuota(c)
-			c.JSON(http.StatusBadGateway, gin.H{"error": "The AI service returned unreadable flashcards."})
-			return
-		}
-		cards := cleanCards(out.Cards)
-		if len(cards) < minCards {
-			middleware.RefundQuota(c)
-			c.JSON(http.StatusBadGateway, gin.H{"error": "The AI service returned too few flashcards."})
-			return
-		}
-		stored, _ = json.Marshal(cards)
-		response = gin.H{"kind": kindFlashcards, "cards": cards}
-	case kindQuiz:
-		var out struct {
-			Questions []quizQuestion `json:"questions"`
-		}
-		if err := json.Unmarshal(respBody, &out); err != nil {
-			middleware.RefundQuota(c)
-			c.JSON(http.StatusBadGateway, gin.H{"error": "The AI service returned an unreadable quiz."})
-			return
-		}
-		questions := cleanQuiz(out.Questions)
-		if len(questions) < minQuizQuestions {
-			middleware.RefundQuota(c)
-			c.JSON(http.StatusBadGateway, gin.H{"error": "The AI service returned too few quiz questions."})
-			return
-		}
-		stored, _ = json.Marshal(questions)
-		response = gin.H{"kind": kindQuiz, "questions": questions}
 	}
 
 	// Keeping the material is a convenience: if it cannot be saved the user still gets it.

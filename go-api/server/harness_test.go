@@ -119,6 +119,8 @@ type fakeAI struct {
 	lastSummary  atomic.Value
 	suggestCalls atomic.Int32
 	studyCalls   atomic.Int32
+	// lastStudy is the most recent /study request body, to see what the model was given to make cards from.
+	lastStudy atomic.Value
 }
 
 // meaningOf stands in for an embedding model: words of the same group ("cat", "dog", "pet") share a
@@ -261,11 +263,17 @@ func (f *fakeAI) handler(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"answer": "library answer [1]", "sources": cited})
 	case "/suggest":
 		_, _ = w.Write([]byte(`{"questions":["What is this about?","Who wrote it?","When was it written?","Why does it matter?"]}`))
+	case "/read":
+		_, _ = w.Write([]byte(`{"filename":"notes.pdf","text":"the uploaded text"}`))
+	case "/read-url":
+		_, _ = w.Write([]byte(`{"filename":"Fake Page Title","text":"the page text"}`))
 	case "/study":
+		raw, _ := io.ReadAll(r.Body)
+		f.lastStudy.Store(raw)
 		var in struct {
 			Kind string `json:"kind"`
 		}
-		_ = json.NewDecoder(r.Body).Decode(&in)
+		_ = json.Unmarshal(raw, &in)
 		if in.Kind == "quiz" {
 			_, _ = w.Write([]byte(`{"kind":"quiz","questions":[` +
 				`{"question":"One?","options":["a","b","c","d"],"answer":1,"explanation":"Because."},` +

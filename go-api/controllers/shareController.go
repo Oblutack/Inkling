@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -37,6 +38,11 @@ func ShareDocument(c *gin.Context) {
 	}
 	document, ok := ownedDocument(c, id, false)
 	if !ok {
+		return
+	}
+	// What is shared is the summary: a document read only to be studied has none yet.
+	if strings.TrimSpace(document.Summary) == "" {
+		c.JSON(http.StatusConflict, gin.H{"error": "This document has no summary to share."})
 		return
 	}
 	if document.ShareToken != nil {
