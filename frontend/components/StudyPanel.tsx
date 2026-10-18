@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
-import type { QuizQuestion, StudyCard } from "../types";
+import type { CardProgress, QuizQuestion, StudyCard } from "../types";
 import { API_URL, apiError } from "../lib/api";
 import { downloadBlob } from "../lib/exportDoc";
 import { cardsCsv, cardsFileName, shuffled } from "../lib/study";
@@ -86,7 +86,7 @@ export default function StudyPanel({ documentId, title, autoStart = false }: Stu
           {error}
         </p>
       )}
-      {!loading && kind === "flashcards" && loaded.cards && <Flashcards key={loaded.cards[0]?.front} cards={loaded.cards} title={title} />}
+      {!loading && kind === "flashcards" && loaded.cards && <Flashcards key={loaded.cards[0]?.front} cards={loaded.cards} title={title} documentId={documentId} />}
       {!loading && kind === "quiz" && loaded.questions && <Quiz key={loaded.questions[0]?.question} questions={loaded.questions} />}
     </div>
   );
@@ -94,8 +94,26 @@ export default function StudyPanel({ documentId, title, autoStart = false }: Stu
 
 // ---- flashcards ----------------------------------------------------------------------------------------
 
-function Flashcards({ cards, title }: { cards: StudyCard[]; title: string }) {
+function Flashcards({ cards, title, documentId }: { cards: StudyCard[]; title: string; documentId: number }) {
   const t = useT();
+  // How well each card is known (only cards that were rated), kept by the server for spaced repetition.
+  const [progress, setProgress] = useState<Record<string, CardProgress>>({});
+  const [rating, setRating] = useState(false);
+  const [rateError, setRateError] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get<{ cards: CardProgress[] }>(`${API_URL}/documents/${documentId}/cards/progress`)
+      .then((response) => {
+        if (!cancelled) setProgress(Object.fromEntries(response.data.cards.map((c) => [c.front, c])));
+      })
+      .catch(() => {
+        // Without the progress the cards still work; they just show no status.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [documentId]);
   const [order, setOrder] = useState(() => cards.map((_, i) => i));
   const [position, setPosition] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -105,6 +123,24 @@ function Flashcards({ cards, title }: { cards: StudyCard[]; title: string }) {
     setPosition((p) => Math.min(order.length - 1, Math.max(0, p + delta)));
     setFlipped(false);
   };
+
+  // Say whether the card was known: it comes back sooner or later, and the next card is shown.
+  const rate = async (knew: boolean) => {
+    setRating(true);
+    setRateError("");
+    try {
+      const response = await axios.post<{ box: number; dueOn: string }>(`${API_URL}/documents/${documentId}/cards/review`, { front: card.front, knew });
+      setProgress((prev) => ({ ...prev, [card.front]: { front: card.front, box: response.data.box, dueOn: response.data.dueOn, due: !knew } }));
+      if (position < order.length - 1) go(1);
+      else setFlipped(false);
+    } catch (err) {
+      setRateError(apiError(err, t("study.rateFailed")));
+    } finally {
+      setRating(false);
+    }
+  };
+  const known = progress[card.front];
+  const dueCount = Object.values(progress).filter((p) => p.due).length;
 
   return (
     <div className="mt-3" data-testid="flashcards">
@@ -118,6 +154,30 @@ function Flashcards({ cards, title }: { cards: StudyCard[]; title: string }) {
         <span className="block text-xs font-semibold uppercase tracking-widest text-ink/70">{flipped ? t("study.answer") : t("study.question")}</span>
         <span className="mt-2 block">{flipped ? card.back : card.front}</span>
       </button>
+      <p className="muted mt-2 text-sm" data-testid="card-status">
+        {!known
+          ? t("study.status.new")
+          : known.due
+          ? t("study.status.due")
+          : t("study.status.box", { box: known.box, date: new Date(known.dueOn + "T12:00:00").toLocaleDateString() })}
+        {dueCount > 0 && <> · {t("study.dueCount", { n: dueCount })}</>}
+      </p>
+      {flipped && (
+        <div className="mt-3 flex flex-wrap items-center gap-3" role="group" aria-label={t("study.rateHint")} data-testid="rate-card">
+          <span className="text-sm font-medium">{t("study.rateHint")}</span>
+          <button type="button" onClick={() => void rate(false)} disabled={rating} className={actionButton}>
+            {t("study.missed")}
+          </button>
+          <button type="button" onClick={() => void rate(true)} disabled={rating} className="btn btn-primary btn-sm">
+            {t("study.knew")}
+          </button>
+        </div>
+      )}
+      {rateError && (
+        <p className="mt-2 text-sm font-medium text-danger" role="alert">
+          {rateError}
+        </p>
+      )}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium tabular-nums" data-testid="flashcard-position">
           {position + 1} / {order.length}
