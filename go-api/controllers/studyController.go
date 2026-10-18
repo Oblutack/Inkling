@@ -6,6 +6,7 @@ import (
 	"ai-summarizer/go-api/models"
 	"ai-summarizer/go-api/reviews"
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"log/slog"
@@ -56,16 +57,22 @@ type studyMaterial struct {
 
 // postToAI sends a JSON payload to the AI service and returns the body of a successful reply.
 func postToAI(c *gin.Context, path string, payload any) ([]byte, *apiError) {
+	return postToAIContext(c.Request.Context(), middleware.RequestIDFrom(c), path, payload)
+}
+
+// postToAIContext is postToAI for work that is not a request (a scheduled check of a watched page): the context and the id
+// that its log lines are matched by are given directly.
+func postToAIContext(ctx context.Context, requestID, path string, payload any) ([]byte, *apiError) {
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return nil, &apiError{http.StatusInternalServerError, "Failed to prepare the request."}
 	}
-	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodPost, aiServiceURL(path), bytes.NewReader(raw))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, aiServiceURL(path), bytes.NewReader(raw))
 	if err != nil {
 		return nil, &apiError{http.StatusInternalServerError, "Failed to prepare the request."}
 	}
 	req.Header.Set("Content-Type", "application/json")
-	prepareAIRequest(c, req)
+	setAIHeaders(req, requestID)
 	return callAIService(req)
 }
 

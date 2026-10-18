@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -179,7 +180,12 @@ func CompareDocuments(c *gin.Context) {
 
 // postComparison asks the AI service to compare two texts and returns the result in the shape that may be sent on.
 func postComparison(c *gin.Context, oldName, oldText, newName, newText, language string) (compareResult, *apiError) {
-	reply, apiErr := postToAI(c, "/compare", gin.H{
+	return compareTexts(c.Request.Context(), middleware.RequestIDFrom(c), oldName, oldText, newName, newText, language)
+}
+
+// compareTexts is postComparison for callers that are not a request.
+func compareTexts(ctx context.Context, requestID, oldName, oldText, newName, newText, language string) (compareResult, *apiError) {
+	reply, apiErr := postToAIContext(ctx, requestID, "/compare", gin.H{
 		"old":      gin.H{"name": oldName, "text": oldText},
 		"new":      gin.H{"name": newName, "text": newText},
 		"language": language,

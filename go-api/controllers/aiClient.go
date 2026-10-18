@@ -539,7 +539,12 @@ func webAddressOf(c *gin.Context) (string, *apiError) {
 	if err := c.ShouldBindJSON(&payload); err != nil {
 		return "", &apiError{http.StatusBadRequest, "Invalid request body."}
 	}
-	address := strings.TrimSpace(payload.URL)
+	return cleanWebAddress(payload.URL)
+}
+
+// cleanWebAddress checks that text looks like an http or https address, and returns it trimmed.
+func cleanWebAddress(raw string) (string, *apiError) {
+	address := strings.TrimSpace(raw)
 	if address == "" {
 		return "", &apiError{http.StatusBadRequest, "A web address is required."}
 	}
