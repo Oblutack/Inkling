@@ -268,5 +268,20 @@
   },
   "privacyText": {
     "message": "Der Text der Seite (oder Ihrer Auswahl) wird an die obige Inkling-Adresse gesendet, wenn Sie die Schaltfläche drücken, und an keine andere Stelle. Im Hintergrund wird nichts gelesen, und nichts wird gesendet, bevor Sie es verlangen."
+  },
+  "saveLater": {
+    "message": "Für später speichern"
+  },
+  "savingLater": {
+    "message": "Wird in deiner Leseliste gespeichert..."
+  },
+  "savedLater": {
+    "message": "In deiner Leseliste gespeichert, mit einer kurzen Zusammenfassung."
+  },
+  "alreadySavedLater": {
+    "message": "Diese Seite ist schon in deiner Leseliste."
+  },
+  "errListFull": {
+    "message": "Deine Leseliste ist voll. Entferne oder archiviere zuerst Einträge auf der Inkling-Website."
   }
 }

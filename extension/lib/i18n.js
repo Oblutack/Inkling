@@ -37,6 +37,8 @@ export function errorText(error, host) {
       return t("errQuota");
     case "rate_limited":
       return error.retryAfter > 0 ? t("errRateLimit", error.retryAfter) : t("errRateLimitSoon");
+    case "list_full":
+      return t("errListFull");
     case "too_large":
       return t("errTooLarge");
     case "paused":

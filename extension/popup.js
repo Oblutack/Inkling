@@ -1,4 +1,4 @@
-import { InklingError, summarizeText, summarizeUrl } from "./lib/api.js";
+import { InklingError, saveForLater, summarizeText, summarizeUrl } from "./lib/api.js";
 import { errorText, t, translatePage } from "./lib/i18n.js";
 import { renderMarkdown } from "./lib/markdown.js";
 import { readPage } from "./lib/page.js";
@@ -75,11 +75,14 @@ async function showReady() {
     $("page-title").textContent = tab?.title || t("untitledPage");
     $("page-host").textContent = "";
     $("summarize-page").disabled = true;
+    $("save-later").disabled = true;
     $("summarize-selection").hidden = true;
     showError(t("cannotRead"));
     return;
   }
   $("summarize-page").disabled = false;
+  $("save-later").disabled = false;
+  $("status").textContent = "";
   $("page-title").textContent = page.title || t("untitledPage");
   $("page-host").textContent = hostOf(page.url);
   const selected = wordsIn(page.selection);
@@ -177,6 +180,29 @@ async function run(useSelection) {
   }
 }
 
+// Saves the page to the reading list: its address when it is a web page (the server reads it), else the text that was read.
+async function saveLater() {
+  showError("");
+  $("save-later").disabled = true;
+  $("status").textContent = t("savingLater");
+  try {
+    const target = /^https?:/i.test(page.url) ? { url: page.url } : { text: page.title ? [page.title, page.text].join("\n\n") : page.text };
+    if (target.text !== undefined && !target.text.trim()) throw new InklingError("no_text");
+    const result = await saveForLater({
+      baseUrl: normalizeBaseUrl(settings.baseUrl).url,
+      apiKey: settings.apiKey.trim(),
+      language: settings.language,
+      ...target,
+    });
+    $("status").textContent = result.alreadySaved ? t("alreadySavedLater") : t("savedLater");
+  } catch (error) {
+    $("status").textContent = "";
+    showError(error instanceof InklingError ? (error.code === "no_text" ? t("noText") : errorText(error, hostOf(settings.baseUrl))) : t("errUnknown", "?"));
+  } finally {
+    $("save-later").disabled = false;
+  }
+}
+
 async function init() {
   translatePage();
   settings = await loadSettings();
@@ -206,6 +232,7 @@ async function init() {
   });
   $("summarize-page").addEventListener("click", () => run(false));
   $("summarize-selection").addEventListener("click", () => run(true));
+  $("save-later").addEventListener("click", () => void saveLater());
   $("cancel").addEventListener("click", () => controller?.abort());
   $("stop").addEventListener("click", () => controller?.abort());
   $("again").addEventListener("click", () => showReady());

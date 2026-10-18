@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { InklingError, MAX_TEXT_CHARS, errorFromResponse, keyUsage, summarizeText, summarizeUrl } from "../lib/api.js";
+import { InklingError, MAX_TEXT_CHARS, errorFromResponse, keyUsage, saveForLater, summarizeText, summarizeUrl } from "../lib/api.js";
 import { errorText } from "../lib/i18n.js";
 
 const KEY = "ink_" + "k".repeat(40);
@@ -71,6 +71,7 @@ test("the API's own reasons become codes", () => {
     [503, { code: "daily_budget" }, "paused"],
     [429, {}, "rate_limited"],
     [413, {}, "too_large"],
+    [409, { error: "Your reading list is full." }, "list_full"],
     [502, {}, "ai_failed"],
     [400, { error: "Word count must be between 50 and 1000." }, "bad_request"],
     [418, null, "unknown"],
@@ -131,4 +132,36 @@ test("every code has a sentence (the words themselves come from the language fil
   assert.equal(errorText(new InklingError("rate_limited", { retryAfter: 9 }), "h"), "errRateLimit");
   assert.equal(errorText(new InklingError("rate_limited"), "h"), "errRateLimitSoon");
   assert.equal(errorText(new InklingError("bad_request", { detail: "why" }), "h"), "errBadRequest");
+});
+
+test("a page is saved for later by its address, and nothing is streamed", async () => {
+  const fetchImpl = fakeFetch(201, { id: 12, title: "A post", summary: "x", alreadySaved: false }, { "X-Quota-Remaining": "40" });
+  const result = await saveForLater({ ...base, url: "https://blog.example/post", language: "German", fetchImpl });
+  const { url, init } = fetchImpl.calls[0];
+  assert.equal(url.pathname, "/v1/reading-list");
+  assert.equal(url.searchParams.get("language"), "German");
+  assert.equal(url.searchParams.has("stream"), false);
+  assert.equal(init.method, "POST");
+  assert.equal(init.headers.Authorization, `Bearer ${KEY}`);
+  assert.equal(init.credentials, "omit");
+  assert.deepEqual(JSON.parse(init.body), { url: "https://blog.example/post" });
+  assert.deepEqual(result, { id: 12, title: "A post", alreadySaved: false, quotaRemaining: 40 });
+});
+
+test("a text is saved for later when the page has no address to read, and long text is cut", async () => {
+  const fetchImpl = fakeFetch(201, { id: 3, title: "T" });
+  await saveForLater({ ...base, text: "a".repeat(MAX_TEXT_CHARS + 10), fetchImpl });
+  assert.equal(JSON.parse(fetchImpl.calls[0].init.body).text.length, MAX_TEXT_CHARS);
+});
+
+test("a page that was saved already is reported as such", async () => {
+  const result = await saveForLater({ ...base, url: "https://blog.example/post", fetchImpl: fakeFetch(200, { id: 12, title: "A post", alreadySaved: true }) });
+  assert.equal(result.alreadySaved, true);
+  assert.equal(result.quotaRemaining, null);
+});
+
+test("saving fails with the code of the reason", async () => {
+  await assert.rejects(saveForLater({ ...base, url: "https://x.example", fetchImpl: fakeFetch(409, { error: "full" }) }), (error) => error.code === "list_full");
+  await assert.rejects(saveForLater({ ...base, url: "https://x.example", fetchImpl: fakeFetch(422, { error: "unreadable" }) }), (error) => error.code === "bad_request");
+  await assert.rejects(saveForLater({ ...base, url: "https://x.example", fetchImpl: fakeFetch(201, {}) }), (error) => error.code === "ai_failed");
 });

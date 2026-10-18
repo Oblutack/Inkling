@@ -268,5 +268,20 @@
   },
   "privacyText": {
     "message": "Tekst stranice (ili vašeg odabira) šalje se na gornju Inkling adresu kad pritisnete gumb, i nigdje drugdje. Ništa se ne čita u pozadini i ništa se ne šalje dok to ne zatražite."
+  },
+  "saveLater": {
+    "message": "Sačuvaj za kasnije"
+  },
+  "savingLater": {
+    "message": "Čuvam na vašu listu za čitanje..."
+  },
+  "savedLater": {
+    "message": "Sačuvano na vašu listu za čitanje, s kratkim sažetkom."
+  },
+  "alreadySavedLater": {
+    "message": "Ta stranica je već na vašoj listi za čitanje."
+  },
+  "errListFull": {
+    "message": "Vaša lista za čitanje je puna. Prvo uklonite ili arhivirajte stavke na web stranici Inkling."
   }
 }

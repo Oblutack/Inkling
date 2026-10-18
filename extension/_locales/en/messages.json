@@ -268,5 +268,20 @@
   },
   "privacyText": {
     "message": "The text of the page (or your selection) is sent to the Inkling address above when you press the button, and nowhere else. Nothing is read in the background, and nothing is sent until you ask."
+  },
+  "saveLater": {
+    "message": "Save for later"
+  },
+  "savingLater": {
+    "message": "Saving to your reading list..."
+  },
+  "savedLater": {
+    "message": "Saved to your reading list, with a short summary."
+  },
+  "alreadySavedLater": {
+    "message": "That page is already on your reading list."
+  },
+  "errListFull": {
+    "message": "Your reading list is full. Remove or archive some items on the Inkling website first."
   }
 }
