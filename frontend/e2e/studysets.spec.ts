@@ -162,6 +162,9 @@ test.describe("study sets", () => {
     await makeCards(page);
     const card = cardOf(page, "Cell biology notes");
     await expect(card.getByTestId("flashcard")).toBeVisible();
+    // A new card fades in. Scanned halfway, its text is a lighter mix of colours and fails the contrast rule on a slow
+    // machine (GitHub's), so wait until it is fully opaque.
+    await expect(card).toHaveCSS("opacity", "1");
     results = await new AxeBuilder({ page }).include('[data-testid="document-card"]').withTags(tags).analyze();
     expect(violationsOf(results)).toEqual([]);
   });
