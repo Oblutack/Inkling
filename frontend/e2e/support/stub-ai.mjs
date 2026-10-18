@@ -12,6 +12,8 @@
 //   POST /embed                          JSON {texts, kind}: word-bucket vectors, synonyms share a bucket
 //   POST /read | /read-url               multipart file(s) | JSON {url}: the text of a document, with no summary made
 //   POST /study                          JSON {summary, text, kind}: three flashcards, or a three-question quiz
+//   POST /transcribe-voice               multipart file: a spoken question, always "What is the notice period?"
+//   POST /checklist                      JSON {name, text, kind}: four items (found, found but unclear, two not found) and the clause quoted from the text, if any
 //   POST /dates                          JSON {name, text, language}: a "D Month YYYY" is a date, "within N days" and
 //                                        "each month" wait for a date; a sentence with UNSURE is not confirmed
 // Magic inputs: text containing FAIL_ME makes the "model" fail; SLOW_ME makes it write slowly.
@@ -169,6 +171,42 @@ const server = http.createServer(async (req, res) => {
         };
       }),
       suspicious: String(name).toLowerCase().includes("suspicious"),
+    });
+  }
+
+  if (url.pathname === "/transcribe-voice") {
+    // A spoken question: the stub "hears" the same words every time ("What is the notice period?"), unless the clip is named
+    // "silence" (nothing was said).
+    if (body.toString("latin1").includes("silence")) return json(res, 422, { detail: "No speech was found in that recording." });
+    return json(res, 200, { text: "What is the notice period?", language: "en" });
+  }
+
+  if (url.pathname === "/checklist") {
+    const { text = "", kind = "lease", name = "" } = JSON.parse(body.toString("utf8") || "{}");
+    if (String(name).toLowerCase().includes("boom")) return json(res, 502, { detail: "The language model failed to check the contract." });
+    // The first sentence with "rent" is the rent; "UNSURE" in the text makes the deposit unclear; "RENEWS" is an unusual clause.
+    const sentences = String(text).split(/(?<=[.!?])\s+/).filter(Boolean);
+    const rent = sentences.find((s) => /rent/i.test(s));
+    const renews = sentences.find((s) => /renews/i.test(s));
+    const items = [
+      rent
+        ? { id: "rent", status: "found", value: rent.slice(0, 60), quote: rent, page: 1, reason: "" }
+        : { id: "rent", status: "missing", value: "", quote: "", page: null, reason: "" },
+      String(text).includes("UNSURE")
+        ? { id: "deposit", status: "unclear", value: "two months", quote: "a deposit", page: null, reason: "The value was not found in the quote." }
+        : { id: "deposit", status: "missing", value: "", quote: "", page: null, reason: "" },
+      { id: "notice", status: "missing", value: "", quote: "", page: null, reason: "" },
+      { id: "pets", status: "missing", value: "", quote: "", page: null, reason: "" },
+    ];
+    const counts = { found: 0, unclear: 0, missing: 0 };
+    for (const item of items) counts[item.status] += 1;
+    return json(res, 200, {
+      kind,
+      items,
+      counts,
+      unusual: renews ? [{ what: "The lease renews by itself.", quote: renews, page: 1 }] : [],
+      unusualChecked: !String(text).includes("NOUNUSUAL"),
+      suspicious: /ignore all previous instructions/i.test(String(text)),
     });
   }
 
