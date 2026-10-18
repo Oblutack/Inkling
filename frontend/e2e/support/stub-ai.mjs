@@ -10,6 +10,8 @@
 //                                                          photos are pages (text names the file, type and size)
 //   POST /chat                           JSON {text, question, history}
 //   POST /embed                          JSON {texts, kind}: word-bucket vectors, synonyms share a bucket
+//   POST /read | /read-url               multipart file(s) | JSON {url}: the text of a document, with no summary made
+//   POST /study                          JSON {summary, text, kind}: three flashcards, or a three-question quiz
 // Magic inputs: text containing FAIL_ME makes the "model" fail; SLOW_ME makes it write slowly.
 import http from "node:http";
 
@@ -225,6 +227,20 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { filename: `Overview: ${name}`, summary });
   }
 
+  // A document read only to be studied: the text, with no summary made (the same refusals as for a summary).
+  if (url.pathname === "/read-url") {
+    const { url: address = "" } = JSON.parse(body.toString("utf8") || "{}");
+    if (address.includes("private.example")) {
+      return json(res, 422, { detail: "That address is not on the public internet, so Inkling cannot open it." });
+    }
+    return json(res, 200, { filename: `Page from ${new URL(address).hostname}`, text: `(stub) article text read from ${address}` });
+  }
+
+  if (url.pathname === "/read") {
+    const names = uploadedNames(body);
+    return json(res, 200, { filename: names.join(", "), text: `(stub) text read from ${names.join(", ")}` });
+  }
+
   if (url.pathname === "/summarize-url") {
     const { url: address = "" } = JSON.parse(body.toString("utf8") || "{}");
     // Addresses the real service would refuse, so tests can see how the page shows the reason.
@@ -297,6 +313,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === "/study") {
+    if (body.toString("utf8").includes("FAIL_ME")) return json(res, 502, { detail: "The language model failed to write flashcards." });
     const { kind = "flashcards" } = JSON.parse(body.toString("utf8") || "{}");
     if (kind === "quiz") {
       return json(res, 200, {

@@ -155,7 +155,7 @@ test.describe("questions, rewriting and study", () => {
     await newSignedInUser(page);
     await saveDoc(page, "Alpha notes\nSome words about alpha.", 1);
 
-    await page.getByRole("button", { name: "Study" }).click();
+    await page.getByTestId("document-card").getByRole("button", { name: "Study" }).click();
     await page.getByRole("button", { name: "Flashcards" }).click();
     const card = page.getByTestId("flashcard");
     await expect(card).toContainText("Front of card one");
@@ -175,7 +175,7 @@ test.describe("questions, rewriting and study", () => {
     await newSignedInUser(page);
     await saveDoc(page, "Alpha notes\nSome words about alpha.", 1);
 
-    await page.getByRole("button", { name: "Study" }).click();
+    await page.getByTestId("document-card").getByRole("button", { name: "Study" }).click();
     await page.getByRole("button", { name: "Quiz" }).click();
     const quiz = page.getByTestId("quiz");
 
