@@ -248,7 +248,9 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		verified.POST("/documents/:id/podcast", chatUserLimit, smallBody, controllers.ReplayStoredPodcast, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.PodcastDocument)
 		verified.POST("/documents/:id/rewrite", summarizeUserLimit, smallBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.RewriteDocument)
 		verified.POST("/documents/:id/suggestions", chatUserLimit, dailyBudget, controllers.SuggestQuestions)
+		verified.POST("/voice/transcribe", chatUserLimit, middleware.MaxBody(controllers.VoiceBodyBytes), dailyBudget, controllers.TranscribeVoice)
 		verified.POST("/documents/:id/dates", chatUserLimit, dailyBudget, controllers.FindDocumentDates)
+		verified.POST("/documents/:id/checklist", chatUserLimit, smallBody, controllers.ReplayStoredChecklist, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.CheckContract)
 		verified.POST("/documents/:id/study", chatUserLimit, smallBody, controllers.ReplayStoredStudy, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.StudyDocument)
 		// A document read only to be studied: no summary is made, the flashcards are, and the document is saved with them.
 		verified.POST("/reading-list", summarizeUserLimit, textBody, middleware.Quota(middleware.QuotaSummaries), dailyBudget, controllers.SaveForLater)

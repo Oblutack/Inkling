@@ -132,8 +132,14 @@ type fakeAI struct {
 	compareCalls  atomic.Int32
 	// datesCalls counts /dates calls, datesReply (when set) replaces its answer, lastDates is the latest request body.
 	datesCalls atomic.Int32
-	datesReply atomic.Value
-	lastDates  atomic.Value
+	// checklistCalls counts /checklist calls, checklistReply (when set) replaces its answer, lastChecklist is the latest request.
+	checklistCalls atomic.Int32
+	// voiceCalls counts /transcribe-voice calls.
+	voiceCalls     atomic.Int32
+	checklistReply atomic.Value
+	lastChecklist  atomic.Value
+	datesReply     atomic.Value
+	lastDates      atomic.Value
 }
 
 // meaningOf stands in for an embedding model: words of the same group ("cat", "dog", "pet") share a
@@ -325,6 +331,23 @@ func (f *fakeAI) handler(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"name": "doc", "fields": results, "suspicious": false})
+	case "/transcribe-voice":
+		f.voiceCalls.Add(1)
+		_, _ = w.Write([]byte(`{"text":"  What does the   lease say about the deposit? ","language":"en"}`))
+	case "/checklist":
+		f.checklistCalls.Add(1)
+		raw, _ := io.ReadAll(r.Body)
+		f.lastChecklist.Store(raw)
+		if override, _ := f.checklistReply.Load().(string); override != "" {
+			_, _ = w.Write([]byte(override))
+			return
+		}
+		_, _ = w.Write([]byte(`{"kind":"lease","items":[` +
+			`{"id":"rent","status":"found","value":"950 euros per month","quote":"The tenant pays 950 euros per month.","page":1,"reason":""},` +
+			`{"id":"deposit","status":"unclear","value":"two months","quote":"a deposit","page":null,"reason":"The value was not found in the quote."},` +
+			`{"id":"pets","status":"missing","value":"","quote":"","page":null,"reason":""}],` +
+			`"counts":{"found":1,"unclear":1,"missing":1},` +
+			`"unusual":[{"what":"The lease renews by itself.","quote":"renews automatically","page":1}],"unusualChecked":true,"suspicious":false}`))
 	case "/dates":
 		f.datesCalls.Add(1)
 		raw, _ := io.ReadAll(r.Body)
