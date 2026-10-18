@@ -101,6 +101,12 @@ services:
         sync: false # optional
       - key: ALERT_EMAIL
         sync: false # optional; where alerts (many people at once, AI budget used up, AI service failing) are emailed
-      # Scheduled work (the daily flashcard reminder). A free Render web service sleeps, and a sleeping service runs no jobs.
+      # Scheduled work (the daily flashcard reminder and the checks of watched pages). A free Render web service sleeps, and a
+      # sleeping service runs no jobs.
       - key: JOBS_ENABLED
         value: "true"
+      # Watched pages (see .env.example); the defaults suit most sites.
+      - key: WATCHES_PER_USER
+        value: "10"
+      - key: WATCH_MIN_HOURS
+        value: "12"

@@ -68,8 +68,13 @@ services:
       - ALERT_ACTIVE_USERS_HIGH=${ALERT_ACTIVE_USERS_HIGH:-25}
       - ALERT_WINDOW_MINUTES=${ALERT_WINDOW_MINUTES:-5}
       - ALERT_COOLDOWN_MINUTES=${ALERT_COOLDOWN_MINUTES:-60}
-      # Scheduled work: the daily flashcard reminder (and later page checks and digests). false turns it off.
+      # Scheduled work: the daily flashcard reminder and the checks of watched pages (later digests). false turns it off.
       - JOBS_ENABLED=${JOBS_ENABLED:-true}
+      # Watched pages (see .env.example).
+      - WATCHES_PER_USER=${WATCHES_PER_USER:-10}
+      - WATCH_MIN_HOURS=${WATCH_MIN_HOURS:-12}
+      - WATCH_CHECK_NOW_MINUTES=${WATCH_CHECK_NOW_MINUTES:-10}
+      - WATCH_EMAIL_MIN_IMPORTANCE=${WATCH_EMAIL_MIN_IMPORTANCE:-medium}
       # Sessions: plain-http local development needs non-Secure cookies. In production use
       # COOKIE_SECURE=true, and COOKIE_SAMESITE=none when the frontend and API are on different sites.
       - COOKIE_SECURE=${COOKIE_SECURE:-false}
