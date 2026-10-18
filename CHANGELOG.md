@@ -9,6 +9,10 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Added
 
+- **web:** Check a contract, and ask the chat by voice with answers read aloud
+- **web:** Helpers and texts for the contract checklist and talking to a document
+- **api:** Contract checklists and spoken questions
+- **ai:** Check contracts against a checklist, and write down a spoken question
 - **extension:** Save the page you are reading to your reading list
 - **web:** Take mock exams, keep a reading list, and choose the digest and alert emails
 - **web:** Helpers and texts for exams, the reading list and the email choices
