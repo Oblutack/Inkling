@@ -47,6 +47,8 @@ const child = spawn(bin, [], {
     COOKIE_SAMESITE: "lax",
     MAIL_PROVIDER: "log",
     REQUIRE_EMAIL_VERIFICATION: "false",
+    // A watched page may be checked again at once, so the tests can see a change without waiting ten minutes.
+    WATCH_CHECK_NOW_MINUTES: "0",
     TURNSTILE_SECRET: "",
     // Two-step sign-in needs a key for its secrets (32 bytes, base64); this one is only for the tests.
     TOTP_ENCRYPTION_KEY: Buffer.from("e2e-key-e2e-key-e2e-key-e2e-key!").toString("base64"),

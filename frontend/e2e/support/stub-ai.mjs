@@ -12,6 +12,8 @@
 //   POST /embed                          JSON {texts, kind}: word-bucket vectors, synonyms share a bucket
 //   POST /read | /read-url               multipart file(s) | JSON {url}: the text of a document, with no summary made
 //   POST /study                          JSON {summary, text, kind}: three flashcards, or a three-question quiz
+//   POST /dates                          JSON {name, text, language}: a "D Month YYYY" is a date, "within N days" and
+//                                        "each month" wait for a date; a sentence with UNSURE is not confirmed
 // Magic inputs: text containing FAIL_ME makes the "model" fail; SLOW_ME makes it write slowly.
 import http from "node:http";
 
@@ -116,6 +118,9 @@ function embed(text) {
   return Buffer.from(new Float32Array(vector.map((v) => v / norm)).buffer).toString("base64");
 }
 
+// How many times each "changing.example" address has been read (see /read-url).
+const readCounts = {};
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://stub");
   const stream = url.searchParams.get("stream") === "true";
@@ -165,6 +170,32 @@ const server = http.createServer(async (req, res) => {
       }),
       suspicious: String(name).toLowerCase().includes("suspicious"),
     });
+  }
+
+  if (url.pathname === "/dates") {
+    const { text = "" } = JSON.parse(body.toString("utf8") || "{}");
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const day = new RegExp(String.raw`(\d{1,2}) (${months.join("|")}) (\d{4})`);
+    const dates = [];
+    let sentences = 0;
+    for (const sentence of String(text).split(/(?<=[.!?])\s+/).filter(Boolean)) {
+      const m = day.exec(sentence);
+      const unsure = sentence.includes("UNSURE");
+      if (!m && !/within \d+ days|each month/.test(sentence)) continue;
+      sentences += 1;
+      const number = dates.length + 1;
+      if (m) {
+        const iso = `${m[3]}-${String(months.indexOf(m[2]) + 1).padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+        dates.push({ what: `Deadline ${number}`, date: iso, repeat: "none", relative: "", quote: sentence, page: null, verified: !unsure,
+          reason: unsure ? "The date is not in the sentence (its day, month and year could not all be found there)." : "" });
+      } else {
+        const repeats = sentence.includes("each month");
+        dates.push({ what: `Deadline ${number}`, date: null, repeat: repeats ? "monthly" : "none",
+          relative: repeats ? "each month" : "within 30 days", quote: sentence, page: null, verified: true, reason: "" });
+      }
+    }
+    dates.sort((a, b) => (a.date === null) - (b.date === null) || String(a.date).localeCompare(String(b.date)));
+    return json(res, 200, { dates, suspicious: /ignore all previous instructions/i.test(String(text)), sentences });
   }
 
   if (url.pathname === "/compare") {
@@ -227,13 +258,27 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { filename: `Overview: ${name}`, summary });
   }
 
-  // A document read only to be studied: the text, with no summary made (the same refusals as for a summary).
+  // A page's text with no summary made: for a study set, and for a page that is watched (?watch=true, which also honours
+  // robots.txt). A page at an address with "changing.example" in it is different every time it is read (two sentences that
+  // change, so a comparison finds two changes); one with "robots.example" asks not to be watched.
   if (url.pathname === "/read-url") {
     const { url: address = "" } = JSON.parse(body.toString("utf8") || "{}");
     if (address.includes("private.example")) {
       return json(res, 422, { detail: "That address is not on the public internet, so Inkling cannot open it." });
     }
-    return json(res, 200, { filename: `Page from ${new URL(address).hostname}`, text: `(stub) article text read from ${address}` });
+    if (url.searchParams.get("watch") === "true" && address.includes("robots.example")) {
+      return json(res, 422, { detail: "That site asks not to be checked automatically (its robots.txt), so Inkling cannot watch that page." });
+    }
+    if (address.includes("unreadable.example")) {
+      return json(res, 422, { detail: "That page was not found (it may have moved or been removed)." });
+    }
+    let text = `(stub) article text read from ${address}`;
+    if (address.includes("changing.example")) {
+      readCounts[address] = (readCounts[address] ?? 0) + 1;
+      const n = readCounts[address];
+      text = `Terms, version ${n}. Payment is due within ${n * 10} days.`;
+    }
+    return json(res, 200, { filename: `Page from ${new URL(address).hostname}`, text });
   }
 
   if (url.pathname === "/read") {
