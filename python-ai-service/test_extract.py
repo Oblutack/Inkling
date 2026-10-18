@@ -442,6 +442,22 @@ def test_summarize_url_returns_the_title_and_the_page_text(client, monkeypatch):
     assert body["text"].startswith("# Heading one") and "Copyright" not in body["text"]
 
 
+def test_read_url_gives_the_title_and_text_without_a_summary(client, monkeypatch):
+    fake_page(monkeypatch, PAGE)
+    r = client.post("/read-url", json={"url": "https://news.example/post"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["filename"] == "The real title" and "summary" not in body
+    assert body["text"].startswith("# Heading one") and "Copyright" not in body["text"]
+
+
+def test_read_url_refuses_pages_with_no_readable_text(client, monkeypatch):
+    fake_page(monkeypatch, '<html><body><div id="app"></div><script>render()</script></body></html>')
+    r = client.post("/read-url", json={"url": "https://spa.example/"})
+    assert r.status_code == 422 and "readable text" in r.json()["detail"]
+    assert client.post("/read-url", json={}).status_code == 422
+
+
 def test_summarize_url_streams_with_the_title_in_the_done_event(client, monkeypatch):
     fake_page(monkeypatch, PAGE)
     r = client.post("/summarize-url?stream=true", json={"url": "https://news.example/post"})

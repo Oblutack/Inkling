@@ -26,25 +26,33 @@ OPTION_COUNT = 4
 MAX_QUIZ_CHARS = 300
 
 
+def _anchor(summary: str) -> str:
+    """What the language of the reply is judged by: the summary, or the text itself when a document is studied
+    without a summary."""
+    return "SUMMARY" if summary.strip() else "FULL TEXT"
+
+
 def _source(summary: str, text: str) -> str:
-    source = f"SUMMARY:\n{summary.strip()}"
+    parts = []
+    if summary.strip():
+        parts.append(f"SUMMARY:\n{summary.strip()}")
     if text.strip() and len(text) <= FULL_TEXT_MAX_CHARS:
-        source += f"\n\nFULL TEXT:\n{text.strip()}"
-    return source
+        parts.append(f"FULL TEXT:\n{text.strip()}")
+    return "\n\n".join(parts)
 
 
-def _spoken(language: str | None) -> str:
-    return f"Write in {language}." if language else "Write in the language of the SUMMARY."
+def _spoken(language: str | None, anchor: str = "SUMMARY") -> str:
+    return f"Write in {language}." if language else f"Write in the language of the {anchor}."
 
 
-def _language_reminder(language: str | None) -> str:
+def _language_reminder(language: str | None, anchor: str = "SUMMARY") -> str:
     """Said last, after the source: models drift into another language now and then (a German question
     for an English document), and the end of a prompt is what they weigh most."""
     if language:
         return f"Remember: every word of your reply must be in {language}."
     return (
-        "Remember: use exactly the language of the SUMMARY above for every word of your reply. "
-        "If the SUMMARY is in English, reply in English. Never translate it."
+        f"Remember: use exactly the language of the {anchor} above for every word of your reply. "
+        f"If the {anchor} is in English, reply in English. Never translate it."
     )
 
 
@@ -54,7 +62,7 @@ def _language_reminder(language: str | None) -> str:
 def suggestions_prompt(summary: str, text: str, language: str | None) -> str:
     return f"""Suggest {MAX_SUGGESTIONS} good questions a reader could ask about the document below.
 Each question must be answerable from the document, specific to it (not generic), and under 90 characters.
-Cover different parts of the document. {_spoken(language)}
+Cover different parts of the document. {_spoken(language, _anchor(summary))}
 Reply with one question per line and nothing else: no numbering, no bullets, no introduction.
 
 SOURCE MATERIAL
@@ -62,7 +70,7 @@ SOURCE MATERIAL
 {_source(summary, text)}
 ---
 
-{_language_reminder(language)}"""
+{_language_reminder(language, _anchor(summary))}"""
 
 
 _LEADING_MARK = re.compile(r"^\s*(?:[-*•>]+|\d+[.)])\s*")
@@ -96,7 +104,7 @@ def flashcards_prompt(summary: str, text: str, language: str | None) -> str:
     return f"""Make {MAX_CARDS} flashcards for studying the document below.
 Each card has a question or term on the front and a short, exact answer on the back (one or two sentences).
 Use ONLY facts from the document and get every figure and name exactly right. Cover the whole document, most
-important points first. {_spoken(language)} Plain text only: no Markdown.
+important points first. {_spoken(language, _anchor(summary))} Plain text only: no Markdown.
 
 Reply in exactly this format and nothing else, one blank line between cards:
 Q: the question or term
@@ -107,7 +115,7 @@ SOURCE MATERIAL
 {_source(summary, text)}
 ---
 
-{_language_reminder(language)}"""
+{_language_reminder(language, _anchor(summary))}"""
 
 
 _Q = re.compile(r"^\s*(?:\d+[.)]\s*)?[*_]*\s*(?:Q|Question|Front)\s*\d*\s*[*_]*\s*[:：]\s*[*_]*\s*(.*)$", re.IGNORECASE)
@@ -155,10 +163,11 @@ def parse_flashcards(reply: str) -> list[dict] | None:
 
 
 def quiz_prompt(summary: str, text: str, language: str | None) -> str:
+    spoken = _spoken(language, _anchor(summary))
     return f"""Write a multiple-choice quiz of {MAX_QUIZ_QUESTIONS} questions about the document below.
 Each question has exactly four options (A to D), only one of which is correct, and the wrong options must be
 plausible but clearly wrong according to the document. Use ONLY facts from the document. Put the correct
-answer in a different position from question to question. {_spoken(language)} Plain text only: no Markdown.
+answer in a different position from question to question. {spoken} Plain text only: no Markdown.
 
 Reply in exactly this format and nothing else, one blank line between questions:
 Q: the question
@@ -174,7 +183,7 @@ SOURCE MATERIAL
 {_source(summary, text)}
 ---
 
-{_language_reminder(language)}"""
+{_language_reminder(language, _anchor(summary))}"""
 
 
 _OPTION = re.compile(r"^\s*[*_]*\s*\(?([A-D])[\).:：]\s*[*_]*\s*(.+)$", re.IGNORECASE)

@@ -66,6 +66,7 @@ from prompts import (
 )
 from retrieval import PAGE_BREAK, Passage, select_passages
 from study import (
+    FULL_TEXT_MAX_CHARS,
     flashcards_prompt,
     parse_flashcards,
     parse_quiz,
@@ -184,14 +185,15 @@ class EmbedPayload(BaseModel):
 
 
 class StudyPayload(BaseModel):
-    summary: str
+    # A document can be studied without a summary when its text is short enough to be given whole.
+    summary: str = ""
     text: str = ""
     language: Optional[str] = None
     kind: str = "flashcards"
 
 
 class SuggestPayload(BaseModel):
-    summary: str
+    summary: str = ""
     text: str = ""
     language: Optional[str] = None
 
@@ -707,6 +709,32 @@ async def summarize_url(
     return {"filename": title, "summary": summary, "text": text}
 
 
+@app.post("/read")
+async def read_files(
+    files: list[UploadFile] = File(...),
+    ocr_pages: bool = Form(False, alias="ocr"),
+):
+    """The text of uploaded documents, with no summary made: for studying a document straight away. Photos are
+    the pages of one document, and several documents are joined the way a combined summary joins them."""
+    if not 1 <= len(files) <= MAX_FILES:
+        raise HTTPException(422, f"Upload between 1 and {MAX_FILES} files")
+    docs = await read_uploads(files, ocr_pages)
+    check_documents(docs)
+    if len(docs) == 1:
+        name, text = docs[0]
+        check_text(text)
+        return {"filename": name, "text": text}
+    return {"filename": label_for(docs), "text": combine_documents(docs)}
+
+
+@app.post("/read-url")
+async def read_url(payload: UrlPayload, ocr_pages: bool = Query(False, alias="ocr")):
+    """The text of the page at a web address, with no summary made."""
+    title, text = await read_web_page(payload.url, ocr_pages)
+    check_text(text)
+    return {"filename": title, "text": text}
+
+
 async def prepare_overview_prompt(
     name: str,
     docs: list[tuple[str, str]],
@@ -978,9 +1006,17 @@ async def podcast(payload: PodcastPayload):
     raise HTTPException(502, "The language model did not return a usable script. Please try again.")
 
 
-def check_generation_input(summary: str, text: str, language: Optional[str]) -> None:
+def check_generation_input(
+    summary: str, text: str, language: Optional[str], text_may_stand_alone: bool = False
+) -> None:
+    """`text_may_stand_alone`: study material can be made from a short text without a summary of it."""
     if not summary.strip():
-        raise HTTPException(422, "A summary is required")
+        if not text_may_stand_alone:
+            raise HTTPException(422, "A summary is required")
+        if not text.strip():
+            raise HTTPException(422, "A summary or the text of the document is required")
+        if len(text) > FULL_TEXT_MAX_CHARS:
+            raise HTTPException(422, "A summary is required for a document this long")
     if language and not is_valid_language(language):
         raise HTTPException(422, "Unsupported language")
     if len(summary) > MAX_PROOF_SUMMARY_CHARS or len(text) > MAX_MULTI_TEXT_CHARS + 10_000:
@@ -1003,7 +1039,7 @@ async def generate_until_usable(prompt: str, parse: Callable[[str], object | Non
 @app.post("/suggest")
 async def suggest_questions(payload: SuggestPayload):
     """Questions a reader could ask about a document, for the chat to offer."""
-    check_generation_input(payload.summary, payload.text, payload.language)
+    check_generation_input(payload.summary, payload.text, payload.language, text_may_stand_alone=True)
     prompt = suggestions_prompt(payload.summary, payload.text, payload.language)
     questions = await generate_until_usable(
         prompt, parse_suggestions, "The language model failed to suggest questions."
@@ -1014,7 +1050,7 @@ async def suggest_questions(payload: SuggestPayload):
 @app.post("/study")
 async def study_material(payload: StudyPayload):
     """Flashcards or a multiple-choice quiz made from a document."""
-    check_generation_input(payload.summary, payload.text, payload.language)
+    check_generation_input(payload.summary, payload.text, payload.language, text_may_stand_alone=True)
     if payload.kind == "flashcards":
         prompt = flashcards_prompt(payload.summary, payload.text, payload.language)
         cards = await generate_until_usable(prompt, parse_flashcards, "The language model failed to write flashcards.")

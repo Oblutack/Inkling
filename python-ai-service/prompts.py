@@ -48,11 +48,18 @@ def is_valid_style(style: str) -> bool:
     return style in STYLE_INSTRUCTIONS
 
 
+# Not a language to translate into: the output follows the text it is made from. Used when a document is read for
+# study and the person has not chosen a language.
+SAME_LANGUAGE = "Same as the text"
+
+
 def is_valid_language(language: str) -> bool:
-    return language in LANGUAGES
+    return language in LANGUAGES or language == SAME_LANGUAGE
 
 
 def _language_line(language: str) -> str:
+    if language == SAME_LANGUAGE:
+        return "\n        Write the entire output in the language the text is written in. Never translate it."
     # Always said, English included: without it a summary of a Spanish text came back in Spanish.
     return f"\n        Write the entire output in {language}, whatever language the text is written in."
 

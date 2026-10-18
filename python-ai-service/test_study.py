@@ -258,14 +258,66 @@ def test_the_language_is_passed_on(client, monkeypatch):
 @pytest.mark.parametrize(
     ("path", "override", "status"),
     [
-        ("/suggest", {"summary": "  "}, 422),
+        ("/suggest", {"summary": "  ", "text": ""}, 422),
         ("/suggest", {"language": "Klingon"}, 422),
         ("/suggest", {"text": "x" * (main.MAX_MULTI_TEXT_CHARS + 20_000)}, 413),
         ("/study", {"kind": "poem"}, 422),
-        ("/study", {"summary": ""}, 422),
+        ("/study", {"summary": "", "text": ""}, 422),
     ],
-    ids=["blank-summary", "unknown-language", "huge-text", "unknown-kind", "study-blank-summary"],
+    ids=["blank-summary", "unknown-language", "huge-text", "unknown-kind", "study-nothing-to-study-from"],
 )
 def test_validation(client, monkeypatch, path, override, status):
     response, _ = post(client, monkeypatch, path, CARDS, **override)
     assert response.status_code == status
+
+
+# ---- a document studied without a summary -----------------------------------------------------------------
+
+
+def test_the_prompts_work_from_the_text_alone_and_judge_the_language_by_it():
+    for prompt in (flashcards_prompt("", "Some short notes.", None), quiz_prompt("  ", "Some short notes.", None)):
+        assert "FULL TEXT:\nSome short notes." in prompt and "SUMMARY" not in prompt
+        assert "language of the FULL TEXT" in prompt and "Never translate" in prompt.rsplit("---", 1)[1]
+    assert "SUMMARY:\nThe summary." in flashcards_prompt("The summary.", "", None)
+    assert "language of the SUMMARY" in flashcards_prompt("The summary.", "", None)
+
+
+def test_flashcards_can_be_made_from_a_short_text_without_a_summary(client, monkeypatch):
+    fake = Replying(CARDS)
+    monkeypatch.setattr(main, "get_llm", lambda: fake)
+    response = client.post("/study", json={"text": "Short lecture notes about cells.", "kind": "flashcards"})
+    assert response.status_code == 200 and len(response.json()["cards"]) == 4
+    assert "FULL TEXT:\nShort lecture notes about cells." in fake.prompts[0]
+
+
+def test_a_long_text_needs_its_summary(client, monkeypatch):
+    fake = Replying(CARDS)
+    monkeypatch.setattr(main, "get_llm", lambda: fake)
+    long_text = "x" * (main.FULL_TEXT_MAX_CHARS + 1)
+    response = client.post("/study", json={"text": long_text, "kind": "flashcards"})
+    assert response.status_code == 422 and "long" in response.json()["detail"] and fake.prompts == []
+    assert (
+        client.post("/study", json={"summary": "A summary.", "text": long_text, "kind": "flashcards"}).status_code
+        == 200
+    )
+
+
+def test_nothing_to_study_from_is_refused(client, monkeypatch):
+    fake = Replying(CARDS)
+    monkeypatch.setattr(main, "get_llm", lambda: fake)
+    assert client.post("/study", json={"summary": " ", "text": " ", "kind": "flashcards"}).status_code == 422
+    assert client.post("/study", json={"kind": "quiz"}).status_code == 422
+    assert fake.prompts == []
+
+
+def test_suggestions_also_work_from_a_short_text_alone(client, monkeypatch):
+    response, fake = post(client, monkeypatch, "/suggest", REPLY, summary="")
+    assert response.status_code == 200 and len(response.json()["questions"]) == MAX_SUGGESTIONS
+    assert "FULL TEXT:\nThe text." in fake.prompts[0] and "SUMMARY:" not in fake.prompts[0]
+    response, _ = post(client, monkeypatch, "/suggest", REPLY, summary="", text="")
+    assert response.status_code == 422
+
+
+def test_the_podcast_still_needs_a_summary(client, monkeypatch):
+    response, _ = post(client, monkeypatch, "/podcast", REPLY, summary="")
+    assert response.status_code == 422

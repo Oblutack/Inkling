@@ -262,3 +262,43 @@ def test_chat_failure_is_hidden(client, monkeypatch):
     monkeypatch.setattr(main, "get_llm", boom)
     r = client.post("/chat", json={"text": "doc", "question": "q?"})
     assert r.status_code == 502 and "secret" not in r.text
+
+
+# --- reading a document without summarizing it (for studying it straight away) ---
+
+
+def test_read_gives_the_text_of_one_file_and_makes_no_model_call(client, llm, monkeypatch):
+    monkeypatch.setattr(main, "extract_pdf_text", lambda path: "extracted body")
+    r = client.post("/read", files=[pdf("notes.pdf")])
+    assert r.status_code == 200
+    assert r.json() == {"filename": "notes.pdf", "text": "extracted body"}
+    assert llm.prompts == []
+
+
+def test_read_joins_several_files_like_a_combined_summary(client, llm, monkeypatch):
+    texts = iter(["alpha content", "beta content"])
+    monkeypatch.setattr(main, "extract_pdf_text", lambda path: next(texts))
+    body = client.post("/read", files=[pdf("a.pdf"), pdf("b.pdf")]).json()
+    assert body["filename"] == "a.pdf, b.pdf"
+    assert "=== a.pdf ===\nalpha content" in body["text"] and "=== b.pdf ===\nbeta content" in body["text"]
+    assert llm.prompts == []
+
+
+def test_read_refuses_too_many_files_and_files_without_text(client, llm, monkeypatch):
+    monkeypatch.setattr(main, "extract_pdf_text", lambda path: "text")
+    too_many = [pdf(f"{i}.pdf") for i in range(main.MAX_FILES + 1)]
+    assert client.post("/read", files=too_many).status_code == 422
+    monkeypatch.setattr(main, "extract_pdf_text", lambda path: "  ")
+    r = client.post("/read", files=[pdf("scan.pdf")])
+    assert r.status_code == 422 and "scan.pdf" in r.json()["detail"]
+
+
+def test_the_same_language_option_follows_the_text_and_is_accepted_by_the_summarizer(client, llm):
+    from prompts import SAME_LANGUAGE, summary_prompt
+
+    prompt = summary_prompt("Hola", 100, "default", SAME_LANGUAGE)
+    assert "language the text is written in" in prompt and "Never translate" in prompt
+    assert "Write the entire output in Same as the text" not in prompt
+    r = client.post("/summarize-text", params={"language": SAME_LANGUAGE}, json={"text": "hello"})
+    assert r.status_code == 200
+    assert client.post("/summarize-text?language=Klingon", json={"text": "hello"}).status_code == 422
