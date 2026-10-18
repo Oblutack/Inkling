@@ -9,6 +9,10 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Added
 
+- **web:** Watch pages, find dates for a calendar, and draw a mind map of a summary
+- **web:** Helpers and texts for watched pages, dates and the mind map
+- **api:** Watch pages for changes and find dates in documents
+- **ai:** Find dates in a document, and honour robots.txt for watched pages
 - **web:** Share links, text and files to Inkling from another app
 - **web:** Review due flashcards, rate cards, and choose which emails to get
 - **web:** Helpers and texts for flashcard review, email choices and sharing
@@ -145,6 +149,7 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Changed
 
+- **api:** Let AI work run outside a request, and add the tables for watches and dates
 - **api:** Share the upload and web address checks
 - **go-api:** Run migrations and structured logging at startup
 - **frontend:** Share markdown and PDF export helpers
