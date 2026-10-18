@@ -58,6 +58,8 @@ export default function DashboardPage() {
   const [tags, setTags] = useState<TagCount[]>([]);
   // The library chat is offered while anything with text is saved, even when a search hides it.
   const [libraryAvailable, setLibraryAvailable] = useState(false);
+  // The study set that was just made: its card opens on the flashcards.
+  const [newStudySet, setNewStudySet] = useState<number | null>(null);
   // Only the newest search may fill the list.
   const latest = useRef(0);
 
@@ -193,6 +195,10 @@ export default function DashboardPage() {
         <EInkForm
           endpoint={`${API_URL}/summarize`}
           onSummaryCreated={fetchDocuments}
+          onStudySetCreated={(id) => {
+            setNewStudySet(id);
+            void fetchDocuments();
+          }}
         />
       </div>
 
@@ -260,6 +266,7 @@ export default function DashboardPage() {
                     doc={doc}
                     onDelete={handleDeleteDocument}
                     onChange={handleChange}
+                    openStudy={doc.ID === newStudySet}
                   />
                 ))
               ) : (

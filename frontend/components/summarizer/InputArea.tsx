@@ -12,6 +12,8 @@ interface InputAreaProps {
   text: string;
   // Set when the text box holds just a web address.
   link?: string | null;
+  // What to tell the person about a web address, when it is not about summarizing (a study set, say).
+  linkHint?: string;
   // Set when a recording is attached.
   hasAudio?: boolean;
   // Set when a photo is attached.
@@ -80,7 +82,7 @@ function PaperclipIcon() {
 
 // The place to put the words: a text box that also takes PDFs. Once PDFs are attached they replace the
 // text box with a list, since a summary comes from one or the other.
-export default function InputArea({ files, text, link, hasAudio, hasPhotos, canRecord, onTextChange, onFilesPicked, onRemoveFile, onMoveFile }: InputAreaProps) {
+export default function InputArea({ files, text, link, linkHint, hasAudio, hasPhotos, canRecord, onTextChange, onFilesPicked, onRemoveFile, onMoveFile }: InputAreaProps) {
   const t = useT();
   // Whether the main pointer is a finger (a phone or tablet) is only known in the browser. There the camera can be
   // offered; on a computer the Attach button already offers the picture files.
@@ -194,7 +196,7 @@ export default function InputArea({ files, text, link, hasAudio, hasPhotos, canR
         )}
         {link && (
           <p className="px-2 text-sm font-medium text-accent" role="status" data-testid="link-detected">
-            {t("form.linkDetected")}
+            {linkHint ?? t("form.linkDetected")}
           </p>
         )}
       </div>

@@ -34,6 +34,8 @@ interface DocumentCardProps {
   onDelete: (id: number) => void;
   // Called with what changed (a new title, tags, summary or share link), so the list stays in step.
   onChange: (id: number, patch: Partial<Document>) => void;
+  // Show the flashcards at once: this document was just made as a study set.
+  openStudy?: boolean;
 }
 
 // The PDF viewer is large; it is only fetched when someone opens a page.
@@ -52,8 +54,10 @@ interface Selected {
   left: number;
 }
 
-export default function DocumentCard({ doc, onDelete, onChange }: DocumentCardProps) {
+export default function DocumentCard({ doc, onDelete, onChange, openStudy = false }: DocumentCardProps) {
   const t = useT();
+  // A study set was read only to be studied, so it has no summary (yet): the tools made for a summary are left out.
+  const studySet = doc.Summary.trim() === "";
   // A recording's text is what was said.
   const transcript = isAudioFile(doc.Filename);
   // Only PDFs have pages to open; a kept recording is played.
@@ -65,7 +69,7 @@ export default function DocumentCard({ doc, onDelete, onChange }: DocumentCardPr
   };
   const [chatOpen, setChatOpen] = useState(false);
   const [podcastOpen, setPodcastOpen] = useState(false);
-  const [studyOpen, setStudyOpen] = useState(false);
+  const [studyOpen, setStudyOpen] = useState(studySet || openStudy);
   const [rewriteOpen, setRewriteOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
@@ -176,7 +180,8 @@ export default function DocumentCard({ doc, onDelete, onChange }: DocumentCardPr
     setProof(null);
     setProofOpen(false);
     setPodcastOpen(false);
-    setStudyOpen(false);
+    // The cards of a study set were made from the text, so they are still right.
+    if (!studySet) setStudyOpen(false);
     setRewriteOpen(false);
   };
 
@@ -221,15 +226,19 @@ export default function DocumentCard({ doc, onDelete, onChange }: DocumentCardPr
         )}
 
         <div className="flex flex-shrink-0 items-center gap-1">
-          <CopyButton variant="icon" what={t("doc.summaryOf", { title: doc.Filename })} text={doc.Summary} />
-          <button
-            onClick={handleDownloadPDF}
-            title={t("doc.savePdfTitle")}
-            aria-label={t("doc.savePdfAria", { title: doc.Filename })}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-ink/80 hover:bg-ink/10 hover:text-ink"
-          >
-            <DownloadIcon className="h-5 w-5" />
-          </button>
+          {!studySet && (
+            <>
+              <CopyButton variant="icon" what={t("doc.summaryOf", { title: doc.Filename })} text={doc.Summary} />
+              <button
+                onClick={handleDownloadPDF}
+                title={t("doc.savePdfTitle")}
+                aria-label={t("doc.savePdfAria", { title: doc.Filename })}
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-ink/80 hover:bg-ink/10 hover:text-ink"
+              >
+                <DownloadIcon className="h-5 w-5" />
+              </button>
+            </>
+          )}
 
           <button
             onClick={() => onDelete(doc.ID)}
@@ -271,7 +280,11 @@ export default function DocumentCard({ doc, onDelete, onChange }: DocumentCardPr
       <div className={`mt-4 border-t border-ink/15 pt-4 ${proofOpen && proof ? "" : "max-h-72 overflow-y-auto pr-1"}`}>
         {/* The id is how the PDF export finds this card's content. */}
         <div id={`doc-content-${doc.ID}`} ref={contentRef} onMouseUp={readSelection} onKeyUp={readSelection} className="reading">
-          {proofOpen && proof ? (
+          {studySet ? (
+            <p className="muted text-base" data-testid="study-set-note">
+              {t("doc.studySetNote")}
+            </p>
+          ) : proofOpen && proof ? (
             <ProofView
               result={proof}
               files={pdfFiles}
@@ -306,12 +319,16 @@ export default function DocumentCard({ doc, onDelete, onChange }: DocumentCardPr
 
       {doc.hasContent && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button type="button" onClick={toggleProof} disabled={proofLoading} className={actionButton}>
-            {proofLoading ? t("doc.checking") : proofOpen ? t("doc.backToSummary") : t("doc.check")}
-          </button>
-          <button type="button" onClick={() => setPodcastOpen((open) => !open)} className={actionButton}>
-            {podcastOpen ? t("doc.closePodcast") : t("doc.podcast")}
-          </button>
+          {!studySet && (
+            <>
+              <button type="button" onClick={toggleProof} disabled={proofLoading} className={actionButton}>
+                {proofLoading ? t("doc.checking") : proofOpen ? t("doc.backToSummary") : t("doc.check")}
+              </button>
+              <button type="button" onClick={() => setPodcastOpen((open) => !open)} className={actionButton}>
+                {podcastOpen ? t("doc.closePodcast") : t("doc.podcast")}
+              </button>
+            </>
+          )}
           <button type="button" onClick={() => setChatOpen((open) => !open)} className={actionButton}>
             {chatOpen ? t("doc.closeChat") : t("doc.chat")}
           </button>
@@ -338,18 +355,22 @@ export default function DocumentCard({ doc, onDelete, onChange }: DocumentCardPr
         </button>
         {moreOpen && (
           <div id={`doc-more-${doc.ID}`} className="mt-1 flex flex-wrap items-center gap-1" data-testid="more-actions">
-            <ReadAloudToggle open={readOpen} onToggle={() => setReadOpen((open) => !open)} />
-            <button type="button" onClick={() => downloadMarkdown(doc.Filename, doc.Summary)} className={textButton}>
-              {t("doc.markdown")}
-            </button>
-            <button type="button" onClick={() => void downloadWord(doc.Filename, doc.Summary)} className={textButton}>
-              {t("doc.word")}
-            </button>
-            <EmailSummaryButton documentId={doc.ID} />
-            <ShareControl documentId={doc.ID} token={doc.shareToken} onChange={(shareToken) => onChange(doc.ID, { shareToken })} />
+            {!studySet && (
+              <>
+                <ReadAloudToggle open={readOpen} onToggle={() => setReadOpen((open) => !open)} />
+                <button type="button" onClick={() => downloadMarkdown(doc.Filename, doc.Summary)} className={textButton}>
+                  {t("doc.markdown")}
+                </button>
+                <button type="button" onClick={() => void downloadWord(doc.Filename, doc.Summary)} className={textButton}>
+                  {t("doc.word")}
+                </button>
+                <EmailSummaryButton documentId={doc.ID} />
+                <ShareControl documentId={doc.ID} token={doc.shareToken} onChange={(shareToken) => onChange(doc.ID, { shareToken })} />
+              </>
+            )}
             {doc.hasContent && (
               <button type="button" onClick={() => setRewriteOpen((open) => !open)} className={textButton} aria-expanded={rewriteOpen}>
-                {rewriteOpen ? t("doc.closeRewrite") : t("doc.rewrite")}
+                {rewriteOpen ? t("doc.closeRewrite") : studySet ? t("doc.makeSummary") : t("doc.rewrite")}
               </button>
             )}
             {doc.hasContent && (
@@ -379,14 +400,14 @@ export default function DocumentCard({ doc, onDelete, onChange }: DocumentCardPr
       </div>
 
       {readOpen && <ReadAloudPlayer markdown={doc.Summary} onClose={() => setReadOpen(false)} />}
-      {rewriteOpen && <RewritePanel documentId={doc.ID} onDone={summaryChanged} />}
+      {rewriteOpen && <RewritePanel documentId={doc.ID} onDone={summaryChanged} first={studySet} />}
       {compareOpen && doc.hasContent && <ComparePanel doc={doc} />}
       {extractOpen && doc.hasContent && <ExtractPanel doc={doc} />}
       {textOpen && doc.hasContent && !recordingFile && <OriginalText documentId={doc.ID} transcript={transcript} />}
       {recordingOpen && recordingFile && <RecordingPanel documentId={doc.ID} file={recordingFile} seek={playAt} />}
       {podcastOpen && <PodcastPlayer documentId={doc.ID} />}
       {chatOpen && <DocumentChat documentId={doc.ID} files={pdfFiles} prefill={prefill} onPlayAt={recordingFile ? playFrom : undefined} />}
-      {studyOpen && <StudyPanel documentId={doc.ID} />}
+      {studyOpen && <StudyPanel documentId={doc.ID} title={doc.Filename} autoStart={openStudy} />}
 
       {viewing && (
         <PdfViewer

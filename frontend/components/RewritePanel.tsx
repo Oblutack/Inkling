@@ -17,11 +17,13 @@ export const LENGTHS = [
 interface RewritePanelProps {
   documentId: number;
   onDone: (summary: string) => void;
+  // The document has no summary yet (a study set): this writes the first one, and nothing is replaced.
+  first?: boolean;
 }
 
 // Writes a saved document's summary again, in another style, length or language, from the text kept
 // with it. The new summary replaces the old one.
-export default function RewritePanel({ documentId, onDone }: RewritePanelProps) {
+export default function RewritePanel({ documentId, onDone, first = false }: RewritePanelProps) {
   const t = useT();
   const [style, setStyle] = useState("default");
   const [language, setLanguage] = useState("English");
@@ -50,7 +52,7 @@ export default function RewritePanel({ documentId, onDone }: RewritePanelProps) 
   return (
     <form onSubmit={rewrite} className="mt-4 rounded-xl border border-ink/20 bg-canvas/50 p-4" data-testid="rewrite">
       <p className="text-sm text-ink/70">
-        {t("rewrite.intro")}
+        {t(first ? "rewrite.introFirst" : "rewrite.intro")}
       </p>
       <div className="mt-3 flex flex-wrap items-end gap-4">
         <label className="flex flex-col gap-1">
@@ -84,7 +86,7 @@ export default function RewritePanel({ documentId, onDone }: RewritePanelProps) 
           </select>
         </label>
         <button type="submit" disabled={busy} className="btn btn-primary">
-          {busy ? t("rewrite.busy") : t("rewrite.submit")}
+          {busy ? t("rewrite.busy") : t(first ? "rewrite.submitFirst" : "rewrite.submit")}
         </button>
       </div>
       {error && (

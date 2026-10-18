@@ -1,9 +1,10 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import type { QuizQuestion, StudyCard } from "../types";
 import { API_URL, apiError } from "../lib/api";
-import { shuffled } from "../lib/study";
+import { downloadBlob } from "../lib/exportDoc";
+import { cardsCsv, cardsFileName, shuffled } from "../lib/study";
 import { useT } from "./I18nProvider";
 import { actionButton, textButton } from "./styles";
 
@@ -11,6 +12,10 @@ type Kind = "flashcards" | "quiz";
 
 interface StudyPanelProps {
   documentId: number;
+  // The document's title, for the name of the downloaded cards.
+  title: string;
+  // Show the flashcards at once (they were just made, or are already kept, so this costs nothing).
+  autoStart?: boolean;
 }
 
 interface Loaded {
@@ -19,7 +24,7 @@ interface Loaded {
 }
 
 // Flashcards and a quiz made from a document. Each is written once and kept, so opening it again is free.
-export default function StudyPanel({ documentId }: StudyPanelProps) {
+export default function StudyPanel({ documentId, title, autoStart = false }: StudyPanelProps) {
   const t = useT();
   const [kind, setKind] = useState<Kind | null>(null);
   const [loaded, setLoaded] = useState<Loaded>({});
@@ -49,6 +54,11 @@ export default function StudyPanel({ documentId }: StudyPanelProps) {
     [documentId, loaded, t]
   );
 
+  useEffect(() => {
+    if (autoStart) void load("flashcards");
+    // Only once, when the panel opens: later changes of `load` must not ask again.
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="mt-4 rounded-xl border border-ink/20 bg-canvas/50 p-4" data-testid="study">
       <div className="flex flex-wrap items-center gap-3">
@@ -76,7 +86,7 @@ export default function StudyPanel({ documentId }: StudyPanelProps) {
           {error}
         </p>
       )}
-      {!loading && kind === "flashcards" && loaded.cards && <Flashcards key={loaded.cards[0]?.front} cards={loaded.cards} />}
+      {!loading && kind === "flashcards" && loaded.cards && <Flashcards key={loaded.cards[0]?.front} cards={loaded.cards} title={title} />}
       {!loading && kind === "quiz" && loaded.questions && <Quiz key={loaded.questions[0]?.question} questions={loaded.questions} />}
     </div>
   );
@@ -84,7 +94,7 @@ export default function StudyPanel({ documentId }: StudyPanelProps) {
 
 // ---- flashcards ----------------------------------------------------------------------------------------
 
-function Flashcards({ cards }: { cards: StudyCard[] }) {
+function Flashcards({ cards, title }: { cards: StudyCard[]; title: string }) {
   const t = useT();
   const [order, setOrder] = useState(() => cards.map((_, i) => i));
   const [position, setPosition] = useState(0);
@@ -129,6 +139,13 @@ function Flashcards({ cards }: { cards: StudyCard[] }) {
             className={textButton}
           >
             {t("study.shuffle")}
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadBlob(new Blob([cardsCsv(cards)], { type: "text/csv;charset=utf-8" }), cardsFileName(title))}
+            className={textButton}
+          >
+            {t("study.exportCsv")}
           </button>
         </div>
       </div>
