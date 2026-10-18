@@ -9,6 +9,11 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Added
 
+- **extension:** Save the page you are reading to your reading list
+- **web:** Take mock exams, keep a reading list, and choose the digest and alert emails
+- **web:** Helpers and texts for exams, the reading list and the email choices
+- **api:** Exam mode, the reading list and the weekly digest
+- **ai:** Summarize only the start of a long text on request, and add the glance style
 - **web:** Watch pages, find dates for a calendar, and draw a mind map of a summary
 - **web:** Helpers and texts for watched pages, dates and the mind map
 - **api:** Watch pages for changes and find dates in documents
