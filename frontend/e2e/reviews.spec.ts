@@ -182,7 +182,7 @@ test.describe("emails from Inkling", () => {
   test("the account page section has no accessibility violations", async ({ page }) => {
     await newSignedInUser(page);
     await page.goto("/account");
-    await expect(page.getByTestId("email-preferences").getByRole("checkbox")).toBeVisible();
+    await expect(page.getByTestId("email-preferences").getByRole("checkbox")).toHaveCount(3);
     const results = await new AxeBuilder({ page }).include('[data-testid="email-preferences"]').withTags(tags).analyze();
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });

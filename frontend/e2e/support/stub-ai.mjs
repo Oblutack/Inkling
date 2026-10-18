@@ -361,12 +361,15 @@ const server = http.createServer(async (req, res) => {
     if (body.toString("utf8").includes("FAIL_ME")) return json(res, 502, { detail: "The language model failed to write flashcards." });
     const { kind = "flashcards" } = JSON.parse(body.toString("utf8") || "{}");
     if (kind === "quiz") {
+      // A source containing "quiz:name" gets questions of its own ("Quiz question one? (name)"), so two sets do not share them.
+      const own = /quiz:(\w+)/.exec(body.toString("utf8"));
+      const mark = own ? ` (${own[1]})` : "";
       return json(res, 200, {
         kind,
         questions: [
-          { question: "Quiz question one?", options: ["Wrong A", "Right one", "Wrong C", "Wrong D"], answer: 1, explanation: "Because one." },
-          { question: "Quiz question two?", options: ["Right two", "Wrong B", "Wrong C", "Wrong D"], answer: 0, explanation: "Because two." },
-          { question: "Quiz question three?", options: ["Wrong A", "Wrong B", "Wrong C", "Right three"], answer: 3, explanation: "Because three." },
+          { question: `Quiz question one?${mark}`, options: ["Wrong A", "Right one", "Wrong C", "Wrong D"], answer: 1, explanation: "Because one." },
+          { question: `Quiz question two?${mark}`, options: ["Right two", "Wrong B", "Wrong C", "Wrong D"], answer: 0, explanation: "Because two." },
+          { question: `Quiz question three?${mark}`, options: ["Wrong A", "Wrong B", "Wrong C", "Right three"], answer: 3, explanation: "Because three." },
         ],
       });
     }

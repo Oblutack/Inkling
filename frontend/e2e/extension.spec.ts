@@ -272,6 +272,25 @@ test.describe("the browser extension", () => {
     await article.close();
   });
 
+  test("a page is saved to the reading list from the popup, with a short summary, and only once", async () => {
+    const { popup, article } = await popupFor("/article");
+    await popup.getByRole("button", { name: "Save for later" }).click();
+    await expect(popup.getByRole("status").filter({ hasText: "Saved to your reading list" })).toBeVisible();
+
+    // the key's owner finds it on their reading list, with the address it came from
+    const listed = await (await api.get("/reading-list?state=unread")).json();
+    const mine = listed.items.find((item: { url: string }) => item.url === `${ARTICLE_HOST}/article`);
+    expect(mine).toBeTruthy();
+    expect(mine.summary).toContain("Stub summary");
+
+    await popup.getByRole("button", { name: "Save for later" }).click();
+    await expect(popup.getByRole("status").filter({ hasText: "already on your reading list" })).toBeVisible();
+    const again = await (await api.get("/reading-list?state=unread")).json();
+    expect(again.items.filter((item: { url: string }) => item.url === `${ARTICLE_HOST}/article`)).toHaveLength(1);
+    await popup.close();
+    await article.close();
+  });
+
   test("a page the browser does not let extensions read is said so, plainly", async () => {
     const page = await context.newPage();
     await page.goto("chrome://version");
@@ -284,6 +303,7 @@ test.describe("the browser extension", () => {
     await popup.goto(extensionUrl(`popup.html?tab=${tabId}`));
     await expect(popup.getByRole("alert")).toContainText("Inkling cannot read this kind of page");
     await expect(popup.getByRole("button", { name: "Summarize this page" })).toBeDisabled();
+    await expect(popup.getByRole("button", { name: "Save for later" })).toBeDisabled();
     await popup.close();
     await page.close();
   });
