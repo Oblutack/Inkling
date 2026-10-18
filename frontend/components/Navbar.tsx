@@ -41,6 +41,8 @@ export default function Navbar() {
   const links = loading ? null : user ? (
     <>
       {link("/dashboard", t("nav.dashboard"))}
+      {link("/reading", t("nav.reading"))}
+      {link("/exam", t("nav.exam"))}
       {link("/watches", t("nav.watches"))}
       {link("/account", t("nav.account"))}
       <button onClick={handleLogout} className={`${linkClass} text-left`}>

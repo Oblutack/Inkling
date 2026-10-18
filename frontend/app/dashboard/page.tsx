@@ -210,6 +210,7 @@ export default function DashboardPage() {
           endpoint={`${API_URL}/summarize`}
           onSummaryCreated={fetchDocuments}
           onWatchCreated={() => router.push("/watches?added=1")}
+          onSavedForLater={() => router.push("/reading?added=1")}
           onStudySetCreated={(id) => {
             setNewStudySet(id);
             void fetchDocuments();

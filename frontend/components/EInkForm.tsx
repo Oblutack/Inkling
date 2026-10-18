@@ -27,13 +27,16 @@ interface EInkFormProps {
   // When given (the dashboard), a web address in the box can be watched instead of summarized: the page is checked now and
   // then, and the person is told when something that matters changes. Called once the page is being watched.
   onWatchCreated?: () => void;
+  // When given (the dashboard and the share page), a web address or a text in the box can be saved to the reading list with a
+  // short summary, to be read later. Called once it is saved.
+  onSavedForLater?: () => void;
 }
 
 type Mode = "summarize" | "study";
 
 // The summarizer: put the words in, choose how the summary should be, press the button. The summary
 // appears underneath as it is written. Or switch to Study: the same input becomes flashcards instead.
-export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated, initialText, initialFiles, onWatchCreated }: EInkFormProps) {
+export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated, initialText, initialFiles, onWatchCreated, onSavedForLater }: EInkFormProps) {
   const { user, loading: authLoading } = useAuth();
   const t = useT();
 
@@ -74,7 +77,8 @@ export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated
   });
   const [watching, setWatching] = useState(false);
   const [watchError, setWatchError] = useState("");
-  const busy = s.isLoading || study.loading || watching;
+  const [saving, setSaving] = useState(false);
+  const busy = s.isLoading || study.loading || watching || saving;
 
   // Start watching the web address in the box: the server opens the page once (to have a text to compare later versions
   // against) and says why when it cannot (the page cannot be read, or its site asks not to be checked automatically).
@@ -92,6 +96,20 @@ export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated
     }
   };
 
+  // Save the web address (or the text) in the box to the reading list: it is read now and summarized in a few lines.
+  const saveForLater = async () => {
+    setSaving(true);
+    setWatchError("");
+    try {
+      await axios.post(`${API_URL}/reading-list`, s.link ? { url: s.link } : { text: s.inputText });
+      onSavedForLater?.();
+    } catch (err) {
+      setWatchError(apiError(err, t("reading.addFailed")));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDownloadPDF = () => {
     const element = document.getElementById("summary-output-content");
     if (element) saveElementAsPdf(element, `${s.exportBaseName}-summary.pdf`);
@@ -100,6 +118,7 @@ export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated
   const showOutput = (s.isLoading || s.summary !== "") && !studying;
   const shownError = watchError || (studying ? study.error || s.error : s.error);
   const canWatch = Boolean(user && onWatchCreated && s.link && !studying);
+  const canSave = Boolean(user && onSavedForLater && (s.link || s.inputText.trim()) && s.files.length === 0 && !studying);
 
   return (
     <div className="w-full">
@@ -176,9 +195,9 @@ export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated
           {busy ? (
             // Separate keys make these two different elements: if React reused one button, the click that cancels
             // would find it turned into a submit button by the time the browser acts on it, and start over.
-            watching ? (
+            watching || saving ? (
               <button key="watching" type="button" disabled className="btn btn-secondary w-full sm:w-auto sm:min-w-[12rem]">
-                {t("watch.buttonBusy")}
+                {saving ? t("reading.saving") : t("watch.buttonBusy")}
               </button>
             ) : (
               <button key="cancel" type="button" onClick={studying ? study.cancel : s.cancel} className="btn btn-danger w-full sm:w-auto sm:min-w-[12rem]">
@@ -193,6 +212,11 @@ export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated
               className="btn btn-primary w-full text-lg sm:w-auto sm:min-w-[12rem]"
             >
               {studying ? t("form.studyButton") : t("form.summarize")}
+            </button>
+          )}
+          {canSave && !busy && (
+            <button key="save" type="button" onClick={() => void saveForLater()} className="btn btn-secondary w-full sm:w-auto sm:min-w-[12rem]">
+              {t("reading.saveForLater")}
             </button>
           )}
           {canWatch && !busy && (

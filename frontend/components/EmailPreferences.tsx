@@ -7,9 +7,12 @@ import { browserTimeZone } from "../lib/timezone";
 import { useT } from "./I18nProvider";
 import { ErrorText, SuccessText } from "./ui";
 
-// The kinds of email this version of Inkling can send, in the order shown. (The server also knows "watch" and "digest": they
-// appear here once the features behind them exist.)
-const KINDS = [{ key: "reminders", label: "emails.reminders", text: "emails.remindersText" }] as const;
+// The kinds of email Inkling can send, in the order shown.
+const KINDS = [
+  { key: "watch", label: "emails.watch", text: "emails.watchText" },
+  { key: "reminders", label: "emails.reminders", text: "emails.remindersText" },
+  { key: "digest", label: "emails.digest", text: "emails.digestText" },
+] as const;
 
 // What Inkling may email the person. Each choice is saved the moment it is made. The time zone is the browser's, sent along
 // so that "morning" is the person's morning.

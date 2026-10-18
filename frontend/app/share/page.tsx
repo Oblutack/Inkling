@@ -68,6 +68,14 @@ function Share() {
             initialText={initialText}
             initialFiles={initialFiles}
             onSummaryCreated={() => void clearShare()}
+            onSavedForLater={
+              user
+                ? () => {
+                    void clearShare();
+                    router.push("/reading?added=1");
+                  }
+                : undefined
+            }
             onStudySetCreated={(id) => {
               void clearShare();
               try {
