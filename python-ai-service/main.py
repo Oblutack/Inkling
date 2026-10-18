@@ -18,6 +18,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel
 from pypdf import PdfReader
 
+import checklists
 import compare
 import dates
 import embeddings
@@ -76,7 +77,15 @@ from study import (
     quiz_prompt,
     suggestions_prompt,
 )
-from transcribe import MAX_AUDIO_BYTES, TranscriptionError, is_audio, transcribe
+from transcribe import (
+    MAX_AUDIO_BYTES,
+    VOICE_MAX_BYTES,
+    VOICE_MAX_SECONDS,
+    TranscriptionError,
+    is_audio,
+    plain_speech,
+    transcribe,
+)
 
 load_dotenv()
 configure_logging()
@@ -1148,6 +1157,96 @@ async def extract_fields(payload: ExtractPayload):
     suspect = await asyncio.to_thread(extraction.injection_sentences, payload.text)
     results = await asyncio.to_thread(extraction.assemble, fields, answers, payload.text, suspect)
     return {"name": payload.name.strip()[:200], "fields": results, "suspicious": bool(suspect)}
+
+
+@app.post("/transcribe-voice")
+async def transcribe_voice(file: UploadFile = File(...)):
+    """A spoken question as text: a short clip (about a minute) goes to Whisper and what was said comes back as one
+    plain line. Nothing is kept."""
+    name = file.filename or "question"
+    if not is_audio(name):
+        raise HTTPException(422, "That is not an audio file.")
+    content = await file.read(VOICE_MAX_BYTES + 1)
+    if len(content) > VOICE_MAX_BYTES:
+        raise HTTPException(413, "That question is too long to listen to. Keep it under a minute.")
+    try:
+        transcript = await transcribe(name, content)
+    except TranscriptionError as exc:
+        headers = {"Retry-After": "30"} if exc.status == 503 else None
+        raise HTTPException(exc.status, exc.message, headers=headers) from exc
+    if transcript.seconds > VOICE_MAX_SECONDS:
+        raise HTTPException(413, "That question is too long to listen to. Keep it under a minute.")
+    text = plain_speech(transcript)
+    if not text:
+        raise HTTPException(422, "No speech was found in that recording.")
+    return {"text": text, "language": transcript.language}
+
+
+class ChecklistPayload(BaseModel):
+    name: str = ""
+    text: str
+    kind: str
+    language: Optional[str] = None
+
+
+# What the model is pointed at when it looks for unusual clauses (passages with these words come first).
+UNUSUAL_QUESTION = (
+    "penalty fee fine terminate termination renew renewal automatic waive waiver liable liability exclusive restrict "
+    "forfeit interest unilateral discretion indemnify non-refundable"
+)
+
+
+@app.post("/checklist")
+async def check_contract(payload: ChecklistPayload):
+    """A contract checked against a list of things to look for: each item found (with the document's own quote and
+    page), unclear or not found, and the clauses that look unusual, each with its quote (see checklists.py). Two
+    questions are asked of the model together; a failure of the second leaves the first one's answer standing."""
+    if not checklists.is_kind(payload.kind):
+        raise HTTPException(422, "Choose lease, job_offer, freelance, nda or purchase.")
+    if payload.language and not is_valid_language(payload.language):
+        raise HTTPException(422, "Unsupported language")
+    if not payload.text.strip():
+        raise HTTPException(422, "This document has no text to check")
+    if len(payload.text) > MAX_MULTI_TEXT_CHARS:
+        raise HTTPException(413, "Document is too long")
+
+    fields = checklists.fields_for(payload.kind)
+    question = " ".join(f"{f.name} {f.description}" for f in fields)
+    passages = await asyncio.to_thread(select_passages, payload.text, question, extraction.MAX_PROMPT_CHARS)
+    unusual_passages = await asyncio.to_thread(
+        select_passages, payload.text, UNUSUAL_QUESTION, extraction.MAX_PROMPT_CHARS
+    )
+    items_prompt = extraction.extraction_prompt(passages, fields, payload.language, copied_values=True)
+    unusual_prompt = checklists.unusual_prompt(unusual_passages, payload.kind, payload.language)
+
+    async def items_call():
+        return await generate_until_usable(
+            items_prompt,
+            lambda reply: extraction.parse_extraction(reply, len(fields)),
+            "The language model failed to check the contract.",
+        )
+
+    async def unusual_call():
+        try:
+            return await generate_until_usable(
+                unusual_prompt, checklists.parse_unusual, "The language model failed to look for unusual clauses."
+            )
+        except HTTPException:
+            return None
+
+    answers, unusual = await asyncio.gather(items_call(), unusual_call())
+    suspect = await asyncio.to_thread(extraction.injection_sentences, payload.text)
+    items = await asyncio.to_thread(checklists.assemble_items, payload.kind, answers, payload.text, suspect)
+    clauses = await asyncio.to_thread(checklists.verify_unusual, unusual or [], payload.text, suspect)
+    return {
+        "name": payload.name.strip()[:200],
+        "kind": payload.kind,
+        "items": items,
+        "counts": checklists.counts_of(items),
+        "unusual": clauses,
+        "unusualChecked": unusual is not None,
+        "suspicious": bool(suspect),
+    }
 
 
 class CompareSide(BaseModel):

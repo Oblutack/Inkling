@@ -149,6 +149,21 @@ def format_transcript(segments: list[dict], name: str, seconds: float) -> str:
     return PAGE_BREAK.join("\n\n".join(parts) for parts in pages)
 
 
+# A spoken question is short: at most this long and this big, and at most this many characters once written down.
+VOICE_MAX_BYTES = 1024 * 1024
+VOICE_MAX_SECONDS = 75.0
+VOICE_MAX_CHARS = 1000
+
+
+def plain_speech(transcript: Transcript) -> str:
+    """What was said, as one plain line: no times, no heading (a spoken question is not a document)."""
+    if transcript.segments:
+        words = " ".join(segment["text"] for segment in speech_segments(transcript.segments))
+    else:
+        words = re.sub(r"^Transcript of [^\n]*\n+", "", transcript.text)
+    return " ".join(words.split())[:VOICE_MAX_CHARS]
+
+
 def _error_for(status: int, body: str) -> TranscriptionError:
     if status in (400, 422):
         return TranscriptionError(

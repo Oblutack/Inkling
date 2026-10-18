@@ -331,3 +331,78 @@ def test_documents_are_not_sent_to_the_speech_service(client, meeting, monkeypat
 )  # fmt: skip
 def test_only_the_file_name_is_used_whatever_the_path_looks_like(path, name):
     assert transcribe.base_name(path) == name
+
+
+# ---- a spoken question -------------------------------------------------------------------------------------------
+
+
+def test_what_was_said_is_one_plain_line_without_times_or_heading():
+    segments = [
+        {"start": 0.0, "end": 2.0, "text": " What is the notice "},
+        {"start": 2.0, "end": 3.5, "text": "period?"},
+        {"start": 4.0, "end": 5.0, "text": "Thanks for watching!", "no_speech_prob": 0.95},
+    ]
+    assert (
+        transcribe.plain_speech(Transcript(text="Transcript of q.webm (length 0:05).", seconds=5, segments=segments))
+        == "What is the notice period?"
+    )
+    assert (
+        transcribe.plain_speech(Transcript(text="Transcript of q.webm.\n\nJust the words.", seconds=2))
+        == "Just the words."
+    )
+    long = Transcript(text="x", seconds=1, segments=[{"start": 0, "end": 1, "text": "word " * 600}])
+    assert len(transcribe.plain_speech(long)) == transcribe.VOICE_MAX_CHARS
+
+
+@pytest.fixture
+def voice(monkeypatch):
+    async def fake(name, content, client=None):
+        fake.calls.append((name, len(content)))
+        return fake.result
+
+    fake.calls = []
+    fake.result = Transcript(
+        text="Transcript of q.webm.",
+        seconds=4,
+        language="en",
+        segments=[{"start": 0, "end": 3, "text": " Who pays the deposit? "}],
+    )
+    monkeypatch.setattr(main, "transcribe", fake)
+    return fake
+
+
+def test_a_spoken_question_comes_back_as_text(client, voice):
+    r = client.post("/transcribe-voice", files={"file": ("question.webm", b"audio", "audio/webm")})
+    assert r.status_code == 200 and r.json() == {"text": "Who pays the deposit?", "language": "en"}
+    assert voice.calls == [("question.webm", 5)]
+
+
+def test_a_question_that_is_not_audio_is_refused_before_anything_is_sent(client, voice):
+    r = client.post("/transcribe-voice", files={"file": ("notes.pdf", b"%PDF", "application/pdf")})
+    assert r.status_code == 422 and voice.calls == []
+
+
+def test_a_question_that_is_too_big_or_too_long_is_refused(client, voice):
+    big = b"x" * (transcribe.VOICE_MAX_BYTES + 1)
+    r = client.post("/transcribe-voice", files={"file": ("question.webm", big, "audio/webm")})
+    assert r.status_code == 413 and voice.calls == []
+    voice.result = Transcript(
+        text="t", seconds=transcribe.VOICE_MAX_SECONDS + 1, segments=[{"start": 0, "end": 1, "text": "hello"}]
+    )
+    r = client.post("/transcribe-voice", files={"file": ("question.webm", b"audio", "audio/webm")})
+    assert r.status_code == 413 and "under a minute" in r.json()["detail"]
+
+
+def test_a_silent_question_and_a_busy_service_are_explained(client, voice, monkeypatch):
+    voice.result = Transcript(
+        text="t", seconds=3, segments=[{"start": 0, "end": 1, "text": "hmm", "no_speech_prob": 0.99}]
+    )
+    r = client.post("/transcribe-voice", files={"file": ("question.webm", b"audio", "audio/webm")})
+    assert r.status_code == 422 and "No speech" in r.json()["detail"]
+
+    async def busy(name, content, client=None):
+        raise TranscriptionError(503, "The transcription service is busy right now. Please try again in a minute.")
+
+    monkeypatch.setattr(main, "transcribe", busy)
+    r = client.post("/transcribe-voice", files={"file": ("question.webm", b"audio", "audio/webm")})
+    assert r.status_code == 503 and r.headers["retry-after"] == "30"
