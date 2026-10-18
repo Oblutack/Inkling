@@ -16,6 +16,17 @@ async function switchToStudy(page: Page) {
   await page.getByTestId("mode-switch").getByRole("button", { name: "Study" }).click();
 }
 
+// What an accessibility check found, one line each: the rule, the element and why. (A bare list of rule names does not
+// say which element is at fault, which is what is needed to fix it.) On GitHub's runners the same lines are also written
+// as an annotation, so they can be read without opening the log.
+function violationsOf(results: Awaited<ReturnType<AxeBuilder["analyze"]>>): string[] {
+  const found = results.violations.flatMap((v) =>
+    v.nodes.map((n) => `${v.id}: ${v.help} -> ${n.target.join(" ")} (${(n.failureSummary ?? "").replace(/\s+/g, " ").trim()})`)
+  );
+  if (found.length > 0 && process.env.GITHUB_ACTIONS) console.log(`::error title=Accessibility check::${found.join(" ;; ").replace(/[\r\n%]/g, " ")}`);
+  return found;
+}
+
 const makeCards = (page: Page) => page.getByRole("button", { name: "Make flashcards" }).click();
 
 test.describe("study sets", () => {
@@ -145,13 +156,13 @@ test.describe("study sets", () => {
     await switchToStudy(page);
     const tags = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
     let results = await new AxeBuilder({ page }).include('[data-testid="mode-switch"]').withTags(tags).analyze();
-    expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+    expect(violationsOf(results)).toEqual([]);
 
     await page.locator("#main-textarea").fill(NOTES);
     await makeCards(page);
     const card = cardOf(page, "Cell biology notes");
     await expect(card.getByTestId("flashcard")).toBeVisible();
     results = await new AxeBuilder({ page }).include('[data-testid="document-card"]').withTags(tags).analyze();
-    expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+    expect(violationsOf(results)).toEqual([]);
   });
 });
