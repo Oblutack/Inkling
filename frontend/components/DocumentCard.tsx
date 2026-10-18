@@ -20,6 +20,7 @@ import PodcastPlayer from "./PodcastPlayer";
 import ProofView from "./ProofView";
 import ReadAloudPlayer, { ReadAloudToggle } from "./ReadAloudPlayer";
 import ComparePanel from "./ComparePanel";
+import ChecklistPanel from "./ChecklistPanel";
 import DatesPanel from "./DatesPanel";
 import ExtractPanel from "./ExtractPanel";
 import MindMap from "./MindMap";
@@ -77,6 +78,7 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
   const [compareOpen, setCompareOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [datesOpen, setDatesOpen] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(false);
   // The quieter actions (export, email, share, rewrite) stay tucked away, unless there is a link to show.
   const [moreOpen, setMoreOpen] = useState(Boolean(doc.shareToken));
   const [textOpen, setTextOpen] = useState(false);
@@ -395,6 +397,11 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
                 {datesOpen ? t("dates.close") : t("dates.open")}
               </button>
             )}
+            {doc.hasContent && (
+              <button type="button" onClick={() => setChecklistOpen((open) => !open)} className={textButton} aria-expanded={checklistOpen}>
+                {checklistOpen ? t("checklist.close") : t("checklist.open")}
+              </button>
+            )}
             {recordingFile && (
               <button type="button" onClick={() => setRecordingOpen((open) => !open)} className={textButton} aria-expanded={recordingOpen}>
                 {recordingOpen ? t("doc.hideRecording") : t("doc.playRecording")}
@@ -416,6 +423,7 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
       {compareOpen && doc.hasContent && <ComparePanel doc={doc} />}
       {extractOpen && doc.hasContent && <ExtractPanel doc={doc} />}
       {datesOpen && doc.hasContent && <DatesPanel doc={doc} />}
+      {checklistOpen && doc.hasContent && <ChecklistPanel doc={doc} />}
       {textOpen && doc.hasContent && !recordingFile && <OriginalText documentId={doc.ID} transcript={transcript} />}
       {recordingOpen && recordingFile && <RecordingPanel documentId={doc.ID} file={recordingFile} seek={playAt} />}
       {podcastOpen && <PodcastPlayer documentId={doc.ID} />}

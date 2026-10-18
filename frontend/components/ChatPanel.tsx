@@ -4,12 +4,23 @@ import axios from "axios";
 import Markdown from "markdown-to-jsx";
 import dynamic from "next/dynamic";
 import type { ChatMessage, ChatSource } from "../types";
+import { useVoiceQuestion } from "../hooks/useVoiceQuestion";
+import { speechText } from "../lib/voice";
 import { API_URL, apiError } from "../lib/api";
 import { linkifyCitations } from "../lib/citations";
 import CitationLink from "./CitationLink";
 import CopyButton from "./CopyButton";
 import { useT } from "./I18nProvider";
 import SourceList from "./SourceList";
+
+function MicIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="2" width="6" height="12" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v4" />
+    </svg>
+  );
+}
 
 const MAX_QUESTION_CHARS = 1000;
 const HISTORY_SENT = 10;
@@ -77,6 +88,27 @@ export default function ChatPanel({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const t = useT();
 
+  // Talking to the document: a spoken question is written down by the server and asked like a typed one; the answer can be read
+  // aloud, and in hands-free mode the next question is listened for when the answer has been read.
+  const [readAloud, setReadAloud] = useState(false);
+  const [handsFree, setHandsFree] = useState(false);
+  const [canSpeak, setCanSpeak] = useState(false);
+  const handsFreeRef = useRef(false);
+  handsFreeRef.current = handsFree;
+  const sendRef = useRef<(text: string) => Promise<void>>(async () => undefined);
+  const voice = useVoiceQuestion((text) => void sendRef.current(text));
+  const handled = useRef(0);
+  useEffect(() => setCanSpeak(typeof window !== "undefined" && "speechSynthesis" in window), []);
+  useEffect(
+    () => () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    },
+    []
+  );
+  const stopSpeaking = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+  };
+
   // Questions worth asking, if this chat can offer them. They are a convenience, so a failure shows nothing.
   useEffect(() => {
     if (!suggestionsPath) return;
@@ -129,6 +161,54 @@ export default function ChatPanel({
       setError(apiError(err, t("common.tryAgain")));
     } finally {
       setIsSending(false);
+    }
+  };
+
+  sendRef.current = send;
+
+  // An answer that has just arrived is read aloud when the person wants that, and hands-free listening goes on after it.
+  useEffect(() => {
+    if (messages.length <= handled.current) return;
+    const last = messages[messages.length - 1];
+    handled.current = messages.length;
+    if (last.role !== "assistant") return;
+    if (readAloud && canSpeak) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(speechText(last.content));
+      const next = () => {
+        if (handsFreeRef.current) void voice.start();
+      };
+      utterance.onend = next;
+      utterance.onerror = next;
+      window.speechSynthesis.speak(utterance);
+    } else if (handsFreeRef.current) {
+      void voice.start();
+    }
+  }, [messages]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Hands-free ends when listening did not work (nothing was said, or the microphone is not allowed).
+  useEffect(() => {
+    if (voice.problem) setHandsFree(false);
+  }, [voice.problem]);
+
+  // A failed answer ends hands-free too: there is nothing to read out.
+  useEffect(() => {
+    if (error) setHandsFree(false);
+  }, [error]);
+
+  const askByVoice = () => {
+    stopSpeaking();
+    void voice.start();
+  };
+
+  const toggleHandsFree = (on: boolean) => {
+    setHandsFree(on);
+    if (on) {
+      setReadAloud(true);
+      askByVoice();
+    } else {
+      voice.cancel();
+      stopSpeaking();
     }
   };
 
@@ -231,6 +311,66 @@ export default function ChatPanel({
             {t("chat.ask")}
           </button>
         </form>
+
+        {voice.available && (
+          <div className="mt-3 space-y-2" data-testid="voice-controls">
+            <div className="flex flex-wrap items-center gap-3">
+              {voice.phase === "listening" ? (
+                <>
+                  <span className="flex items-center gap-2 text-sm font-medium" role="status" data-testid="voice-listening">
+                    <span className="h-3 w-3 animate-pulse rounded-full bg-danger" aria-hidden="true" />
+                    {t("voice.listening")}
+                  </span>
+                  <button type="button" onClick={voice.stop} className="btn btn-primary btn-sm">
+                    {t("voice.stop")}
+                  </button>
+                  <button type="button" onClick={voice.cancel} className="btn btn-quiet btn-sm">
+                    {t("voice.cancel")}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={askByVoice}
+                  disabled={isSending || voice.phase === "sending"}
+                  className="btn btn-secondary btn-sm gap-2"
+                  data-testid="voice-button"
+                >
+                  <MicIcon />
+                  {voice.phase === "sending" ? t("voice.sending") : t("voice.ask")}
+                </button>
+              )}
+              {canSpeak && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={readAloud}
+                    onChange={(e) => {
+                      setReadAloud(e.target.checked);
+                      if (!e.target.checked) {
+                        setHandsFree(false);
+                        stopSpeaking();
+                      }
+                    }}
+                  />
+                  {t("voice.readAloud")}
+                </label>
+              )}
+              {canSpeak && (
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={handsFree} onChange={(e) => toggleHandsFree(e.target.checked)} />
+                  {t("voice.handsFree")}
+                </label>
+              )}
+            </div>
+            {handsFree && <p className="muted text-sm">{t("voice.handsFreeNote")}</p>}
+            {voice.problem && (
+              <p className="text-sm font-medium text-danger" role="alert">
+                {voice.problem}
+              </p>
+            )}
+          </div>
+        )}
       </div>
       {viewing && (
         <PdfViewer
