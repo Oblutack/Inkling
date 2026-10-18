@@ -101,3 +101,6 @@ services:
         sync: false # optional
       - key: ALERT_EMAIL
         sync: false # optional; where alerts (many people at once, AI budget used up, AI service failing) are emailed
+      # Scheduled work (the daily flashcard reminder). A free Render web service sleeps, and a sleeping service runs no jobs.
+      - key: JOBS_ENABLED
+        value: "true"
