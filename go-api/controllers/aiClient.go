@@ -465,6 +465,15 @@ func buildFilesRequest(c *gin.Context, stream bool) (*aiRequest, *apiError) {
 	}
 	opts.Instructions = instructionsOf(c)
 
+	files, apiErr := checkedUploads(c)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return multipartRequest(c, withStream("/summarize-multiple", stream), readFields(c, opts), "files", files)
+}
+
+// checkedUploads is the "files" part of a multipart request, once it has been checked: how many, what kind, how big.
+func checkedUploads(c *gin.Context) ([]*multipart.FileHeader, *apiError) {
 	form, err := c.MultipartForm()
 	if err != nil {
 		return nil, &apiError{http.StatusBadRequest, "Invalid upload."}
@@ -486,8 +495,7 @@ func buildFilesRequest(c *gin.Context, stream bool) (*aiRequest, *apiError) {
 	if total > MaxCombinedBytes() {
 		return nil, &apiError{http.StatusRequestEntityTooLarge, fmt.Sprintf("The files are too large together (max %d MB).", MaxCombinedBytes()>>20)}
 	}
-
-	return multipartRequest(c, withStream("/summarize-multiple", stream), readFields(c, opts), "files", files)
+	return files, nil
 }
 
 // buildURLRequest sends a web address to the AI service, which fetches and reads the page itself (it is
@@ -499,19 +507,9 @@ func buildURLRequest(c *gin.Context, stream bool) (*aiRequest, *apiError) {
 	}
 	opts.Instructions = instructionsOf(c)
 
-	var payload URLPayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		return nil, &apiError{http.StatusBadRequest, "Invalid request body."}
-	}
-	address := strings.TrimSpace(payload.URL)
-	if address == "" {
-		return nil, &apiError{http.StatusBadRequest, "A web address is required."}
-	}
-	if utf8.RuneCountInString(address) > maxURLChars || strings.ContainsAny(address, " \t\r\n") {
-		return nil, &apiError{http.StatusBadRequest, "That does not look like a web address."}
-	}
-	if scheme, _, found := strings.Cut(address, "://"); found && !strings.EqualFold(scheme, "http") && !strings.EqualFold(scheme, "https") {
-		return nil, &apiError{http.StatusBadRequest, "Only http and https web addresses are supported."}
+	address, apiErr := webAddressOf(c)
+	if apiErr != nil {
+		return nil, apiErr
 	}
 
 	body, err := json.Marshal(URLPayload{URL: address})
@@ -532,6 +530,26 @@ func buildURLRequest(c *gin.Context, stream bool) (*aiRequest, *apiError) {
 	req.Header.Set("Content-Type", "application/json")
 	prepareAIRequest(c, req)
 	return &aiRequest{req: req}, nil
+}
+
+// webAddressOf reads the web address from a JSON request body and checks that it looks like one. Whether it may be
+// opened at all (that it is on the public internet) is for the AI service to decide, since it is the one that opens it.
+func webAddressOf(c *gin.Context) (string, *apiError) {
+	var payload URLPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		return "", &apiError{http.StatusBadRequest, "Invalid request body."}
+	}
+	address := strings.TrimSpace(payload.URL)
+	if address == "" {
+		return "", &apiError{http.StatusBadRequest, "A web address is required."}
+	}
+	if utf8.RuneCountInString(address) > maxURLChars || strings.ContainsAny(address, " \t\r\n") {
+		return "", &apiError{http.StatusBadRequest, "That does not look like a web address."}
+	}
+	if scheme, _, found := strings.Cut(address, "://"); found && !strings.EqualFold(scheme, "http") && !strings.EqualFold(scheme, "https") {
+		return "", &apiError{http.StatusBadRequest, "Only http and https web addresses are supported."}
+	}
+	return address, nil
 }
 
 func buildTextRequest(c *gin.Context, stream bool) (*aiRequest, *apiError) {
