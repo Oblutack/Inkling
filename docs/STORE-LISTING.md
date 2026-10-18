@@ -20,6 +20,7 @@ Inkling for the browser turns any web page, or any text you select, into a short
 - **Your choices.** Length (about 100 to 500 words), style (standard, bullet points, brief, simple language, key takeaways) and
   language (15 languages). They are remembered.
 - **Keep or copy.** Copy the summary, or keep it in your Inkling library.
+- **Save for later.** Put the page on your Inkling reading list with a short summary, and read it when you have time.
 - **Private by design.** Nothing is read until you press the button, nothing is sent to anyone but your own Inkling server, and
   there is no analytics, advertising or tracking. The extension can reach only the one server address you give it.
 - **In your language.** The extension speaks English, Spanish, German, French and Bosnian, and follows your browser's light or

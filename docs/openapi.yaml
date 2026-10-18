@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Inkling API
-  version: "1.0.0"
+  version: "1.1.0"
   summary: Summarize text, web pages, documents, photos and recordings from your own programs.
   description: |
     The API for programs. Create a key on the **Account** page, then send it with every request:
@@ -10,9 +10,10 @@ info:
     Authorization: Bearer ink_...
     ```
 
-    **What a key can do.** Summarize, and read today's usage. Nothing else: it cannot read or change your saved
-    summaries, your account or your other keys, so a leaked key can be revoked without harm to anything else.
-    Nothing a key summarizes is saved to your library or kept.
+    **What a key can do.** Summarize, add a page or text to your reading list, and read today's usage. Nothing else: it
+    cannot read or change your saved summaries, your reading list, your account or your other keys, so a leaked key can
+    be revoked without harm to anything else. Nothing a key summarizes is saved to your library or kept, except what it
+    adds to the reading list (a short summary of the page, kept in your library with it) and what `save=true` asks for.
 
     **Whose allowance.** Calls count against the key owner's daily limits (the same as the website) and the site's own
     rate limits. Every response carries `X-Quota-Limit` and `X-Quota-Remaining`. Work that fails because of Inkling
@@ -119,6 +120,74 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/InvalidKey"
+        "422":
+          $ref: "#/components/responses/Unreadable"
+        "429":
+          $ref: "#/components/responses/OverLimit"
+        "502":
+          $ref: "#/components/responses/AiFailed"
+        "503":
+          $ref: "#/components/responses/Paused"
+  /v1/reading-list:
+    post:
+      tags: [Summaries]
+      operationId: saveForLater
+      summary: Save a page or a text to your reading list
+      description: |
+        Inkling reads the page (or takes the text) now, keeps a short summary of it in the key owner's library and puts it on
+        their reading list, to be read later. Send either `url` or `text`. A page that is on the list already is not
+        summarized again: the reply is `200` with `alreadySaved: true`, and nothing is counted. A new one counts as one
+        summary of the owner's allowance. A list holds up to 500 items (`409` when it is full). The summary is written
+        in `language` (default English), in the style of a few lines; the style and length cannot be changed.
+      parameters:
+        - $ref: "#/components/parameters/language"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  maxLength: 2048
+                text:
+                  type: string
+                  maxLength: 200000
+              oneOf:
+                - required: [url]
+                - required: [text]
+            example:
+              url: https://example.com/article
+      responses:
+        "200":
+          description: The page was on the list already.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedItem"
+        "201":
+          description: Saved.
+          headers:
+            X-Quota-Limit:
+              $ref: "#/components/headers/QuotaLimit"
+            X-Quota-Remaining:
+              $ref: "#/components/headers/QuotaRemaining"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/InvalidKey"
+        "409":
+          description: The reading list is full (500 items); `error` says so.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "422":
           $ref: "#/components/responses/Unreadable"
         "429":
@@ -545,8 +614,11 @@ components:
   schemas:
     Style:
       type: string
-      enum: [default, bullets, brief, simple, takeaways]
+      enum: [default, bullets, brief, simple, takeaways, glance]
       default: default
+      description: |
+        `brief` is an executive brief (an overview, key points and implications); `glance` is one plain paragraph of two or
+        three sentences.
     Language:
       type: string
       enum: [English, Spanish, French, German, Italian, Portuguese, Dutch, Polish, Turkish, Russian, Serbian, Croatian, Bosnian, Chinese, Japanese]
@@ -564,6 +636,20 @@ components:
         id:
           type: integer
           description: The saved document's id, only when `save=true` was asked for.
+    SavedItem:
+      type: object
+      required: [id, title, summary, alreadySaved]
+      properties:
+        id:
+          type: integer
+          description: The id of the saved document.
+        title:
+          type: string
+        summary:
+          type: string
+          description: The short summary, in Markdown.
+        alreadySaved:
+          type: boolean
     Meter:
       type: object
       properties:

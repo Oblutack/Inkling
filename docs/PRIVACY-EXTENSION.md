@@ -5,11 +5,13 @@ your data, in plain words.
 
 ## What is sent, and when
 
-Only when you press **Summarize this page** or **Summarize the selection**, the extension sends this to the Inkling address
+Only when you press **Summarize this page**, **Summarize the selection** or **Save for later**, the extension sends this to the Inkling address
 you typed in its settings:
 
 - the text of the page (or of your selection), with the page's title in front of it; or, for a page that has no text of its own
   (such as a PDF in the browser's viewer), the page's address, so the server can read it;
+- when you press **Save for later** instead: the page's address (or, for a page that is not a web page, its text), so that your
+  server can read it and keep a short summary on your reading list;
 - your summary choices (length, style, language, and whether to keep the result in your library);
 - your API key, in an `Authorization` header, so the server knows whose account to use.
 
@@ -28,7 +30,8 @@ Your settings (the server's address, your API key and your choices) are stored i
 storage. They are not synced to your other devices and not sent anywhere except as described above. Removing the extension removes
 them.
 
-Summaries are not stored by the extension. If you tick **Keep it in my Inkling library**, the Inkling server keeps that summary in
+Summaries are not stored by the extension. A page you press **Save for later** on is kept by the Inkling server, in your library and on your reading list,
+until you remove it there. If you tick **Keep it in my Inkling library**, the Inkling server keeps that summary in
 your library, as it does for any summary you save on the website. Otherwise the server does not keep it.
 
 ## Permissions, and why
