@@ -611,6 +611,19 @@ export const en = {
   "twoFactor.newCodesText": "This ends the old ones. Enter your password and a code from your app.",
   "twoFactor.disabled": "Two-step sign-in is now off.",
   "twoFactor.failed": "Something went wrong. Nothing was changed.",
+  "form.modeLabel": "What to make",
+  "form.modeSummarize": "Summary",
+  "form.modeStudy": "Study",
+  "form.studyButton": "Make flashcards",
+  "form.studyHint": "Flashcards and a quiz from your text, link or files, with no summary needed. They are saved in your library.",
+  "form.studyWorking": "Reading it and writing the flashcards...",
+  "form.studyFailed": "Could not make the flashcards.",
+  "form.linkDetectedStudy": "Web link found. Inkling will read the page when you press Make flashcards.",
+  "doc.studySetNote": "Made for studying: flashcards and a quiz from the document, with no summary.",
+  "doc.makeSummary": "Write a summary too",
+  "study.exportCsv": "Download the cards (CSV)",
+  "rewrite.introFirst": "Write a summary of this document. Your flashcards and quiz stay as they are.",
+  "rewrite.submitFirst": "Write the summary",
 } as const;
 
 export type MessageKey = keyof typeof en;
