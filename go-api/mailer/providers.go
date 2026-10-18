@@ -69,13 +69,17 @@ func (b brevoMailer) Send(ctx context.Context, msg Message) error {
 	if b.fromName != "" {
 		sender["name"] = b.fromName
 	}
-	return postJSON(ctx, brevoURL, map[string]string{"api-key": b.apiKey}, map[string]any{
+	body := map[string]any{
 		"sender":      sender,
 		"to":          []map[string]string{{"email": msg.To}},
 		"subject":     msg.Subject,
 		"textContent": msg.Text,
 		"htmlContent": msg.HTML,
-	})
+	}
+	if len(msg.Headers) > 0 {
+		body["headers"] = msg.Headers
+	}
+	return postJSON(ctx, brevoURL, map[string]string{"api-key": b.apiKey}, body)
 }
 
 // ---- Resend --------------------------------------------------------------------------------
@@ -95,11 +99,15 @@ func newResend(apiKey, from string) (Mailer, error) {
 }
 
 func (r resendMailer) Send(ctx context.Context, msg Message) error {
-	return postJSON(ctx, resendURL, map[string]string{"Authorization": "Bearer " + r.apiKey}, map[string]any{
+	body := map[string]any{
 		"from":    r.from,
 		"to":      []string{msg.To},
 		"subject": msg.Subject,
 		"text":    msg.Text,
 		"html":    msg.HTML,
-	})
+	}
+	if len(msg.Headers) > 0 {
+		body["headers"] = msg.Headers
+	}
+	return postJSON(ctx, resendURL, map[string]string{"Authorization": "Bearer " + r.apiKey}, body)
 }

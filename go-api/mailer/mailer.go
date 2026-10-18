@@ -26,6 +26,8 @@ type Message struct {
 	Subject string
 	Text    string
 	HTML    string
+	// Headers are extra email headers, such as List-Unsubscribe on an email the person chose to receive.
+	Headers map[string]string
 }
 
 // Mailer delivers a message.

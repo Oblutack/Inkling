@@ -72,3 +72,36 @@ func SummaryEmail(to, title, summary string) Message {
 </div>`, html.EscapeString(title), html.EscapeString(summary), appName)
 	return Message{To: to, Subject: "Summary: " + title, Text: text, HTML: body}
 }
+
+// Notice is an email the person chose to receive: a reminder, an alert, a digest. It says what it is, what it holds
+// (lines, shown as a list) and where to go, and it always ends with the way to stop such emails (and a List-Unsubscribe
+// header, which mail programs show as an "unsubscribe" button). Nothing from a person's documents goes in it beyond the
+// short lines the caller passes.
+func Notice(to, subject, heading, intro string, lines []string, button, href, why, unsubscribeURL string) Message {
+	var text strings.Builder
+	text.WriteString(heading + "\n\n" + intro + "\n")
+	var items strings.Builder
+	for _, line := range lines {
+		text.WriteString("\n- " + line)
+		items.WriteString("<li>" + html.EscapeString(line) + "</li>")
+	}
+	if len(lines) > 0 {
+		text.WriteString("\n")
+	}
+	text.WriteString("\n" + button + ": " + href + "\n\n" + why + "\nStop these emails: " + unsubscribeURL + "\n\n" + appName)
+	list := ""
+	if items.Len() > 0 {
+		list = "<ul style=\"line-height:1.5\">" + items.String() + "</ul>"
+	}
+	body := fmt.Sprintf(`<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#222">
+<h2>%s</h2>
+<p>%s</p>
+%s<p><a href="%s" style="display:inline-block;background:#222;color:#f5f0e6;padding:12px 22px;text-decoration:none;border-radius:6px">%s</a></p>
+<p style="font-size:13px;color:#555">%s <a href="%s">Stop these emails</a>.</p>
+</div>`, html.EscapeString(heading), html.EscapeString(intro), list, html.EscapeString(href), html.EscapeString(button),
+		html.EscapeString(why), html.EscapeString(unsubscribeURL))
+	return Message{
+		To: to, Subject: subject, Text: text.String(), HTML: body,
+		Headers: map[string]string{"List-Unsubscribe": "<" + unsubscribeURL + ">"},
+	}
+}
