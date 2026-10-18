@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import { AnimatePresence } from "framer-motion";
 import { useT } from "../../components/I18nProvider";
 import { DocumentListSkeleton } from "../../components/Skeleton";
+import ReviewChip from "../../components/ReviewChip";
 import { fieldClass } from "../../components/styles";
 
 function Loading({ what }: { what: "common.loadingForm" | "common.loadingDocument" }) {
@@ -60,6 +61,16 @@ export default function DashboardPage() {
   const [libraryAvailable, setLibraryAvailable] = useState(false);
   // The study set that was just made: its card opens on the flashcards.
   const [newStudySet, setNewStudySet] = useState<number | null>(null);
+  // A study set made on the share page (a different page, so it is handed over): open it on its cards too.
+  useEffect(() => {
+    try {
+      const handed = Number(sessionStorage.getItem("inkling.openStudy"));
+      sessionStorage.removeItem("inkling.openStudy");
+      if (handed > 0) setNewStudySet(handed);
+    } catch {
+      // no session storage: the set is just listed
+    }
+  }, []);
   // Only the newest search may fill the list.
   const latest = useRef(0);
 
@@ -189,6 +200,9 @@ export default function DashboardPage() {
       <h1 className="mb-6 text-3xl md:text-4xl">
         {t("dashboard.title")}
       </h1>
+
+      {/* Flashcards due today, and the way into a review */}
+      <ReviewChip />
 
       {/* New summary form */}
       <div className="card mb-8 md:p-8">

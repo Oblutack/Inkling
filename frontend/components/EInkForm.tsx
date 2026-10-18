@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useStudySetCreator } from "../hooks/useStudySetCreator";
 import { useSummarizer } from "../hooks/useSummarizer";
@@ -19,14 +19,17 @@ interface EInkFormProps {
   // When given (the dashboard, where there is a library to keep it in), signed-in people can also make a study set from
   // what they put in: flashcards with no summary. It is told which document was made.
   onStudySetCreated?: (id: number) => void;
+  // Start with this in the box: something shared to Inkling from another app. Files, or text (a web address is text).
+  initialText?: string;
+  initialFiles?: File[];
 }
 
 type Mode = "summarize" | "study";
 
 // The summarizer: put the words in, choose how the summary should be, press the button. The summary
 // appears underneath as it is written. Or switch to Study: the same input becomes flashcards instead.
-export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated }: EInkFormProps) {
-  const { user } = useAuth();
+export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated, initialText, initialFiles }: EInkFormProps) {
+  const { user, loading: authLoading } = useAuth();
   const t = useT();
 
   // Anonymous visitors prove they're human (when the site has Turnstile configured); signed-in
@@ -48,6 +51,15 @@ export default function EInkForm({ endpoint, onSummaryCreated, onStudySetCreated
         }
       : undefined,
   });
+
+  // Put what was shared in the box, once, when it is known who is signed in (a recording or a photo is for signed-in people).
+  const filled = useRef(false);
+  useEffect(() => {
+    if (filled.current || authLoading) return;
+    filled.current = true;
+    if (initialFiles && initialFiles.length > 0) s.addFiles(initialFiles);
+    else if (initialText) s.changeText(initialText);
+  }, [authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [mode, setMode] = useState<Mode>("summarize");
   const studying = Boolean(user && onStudySetCreated) && mode === "study";
