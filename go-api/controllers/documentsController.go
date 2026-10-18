@@ -207,6 +207,9 @@ func DeleteDocument(c *gin.Context) {
 		if err := tx.Exec("DELETE FROM document_passages WHERE document_id = ?", document.ID).Error; err != nil {
 			return err
 		}
+		if err := tx.Exec("DELETE FROM card_reviews WHERE document_id = ?", document.ID).Error; err != nil {
+			return err
+		}
 		return tx.Delete(&document).Error
 	})
 	if err != nil {

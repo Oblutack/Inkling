@@ -23,6 +23,7 @@ type Rates struct {
 	SummarizeUserPerMinute, SummarizeUserBurst int // signed-in summaries, per user
 	ChatPerMinute, ChatBurst                   int // chat, per user
 	ExportPerMinute, ExportBurst               int // data export, per user
+	ReviewPerMinute, ReviewBurst               int // rating flashcards and reading review progress, per user (no model call)
 }
 
 // DefaultRates are the production limits.
@@ -32,6 +33,7 @@ var DefaultRates = Rates{
 	SummarizeUserPerMinute: 10, SummarizeUserBurst: 5,
 	ChatPerMinute: 20, ChatBurst: 10,
 	ExportPerMinute: 2, ExportBurst: 2,
+	ReviewPerMinute: 120, ReviewBurst: 40,
 }
 
 // Scaled returns the limits multiplied by factor (RATE_LIMIT_MULTIPLIER), for deployments that need
@@ -47,6 +49,7 @@ func (r Rates) Scaled(factor int) Rates {
 		SummarizeUserPerMinute: r.SummarizeUserPerMinute * factor, SummarizeUserBurst: r.SummarizeUserBurst * factor,
 		ChatPerMinute: r.ChatPerMinute * factor, ChatBurst: r.ChatBurst * factor,
 		ExportPerMinute: r.ExportPerMinute * factor, ExportBurst: r.ExportBurst * factor,
+		ReviewPerMinute: r.ReviewPerMinute * factor, ReviewBurst: r.ReviewBurst * factor,
 	}
 }
 
@@ -103,6 +106,8 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 	exportLimit := middleware.RateLimitUser(middleware.NewRateLimiter(rates.ExportPerMinute, rates.ExportBurst))
 	// Mailing a summary to yourself sends a real email, so it gets the same small allowance as an export.
 	emailLimit := middleware.RateLimitUser(middleware.NewRateLimiter(rates.ExportPerMinute, rates.ExportBurst))
+	// Rating a flashcard calls no model and is quick, so it may be done at the pace of reading.
+	reviewLimit := middleware.RateLimitUser(middleware.NewRateLimiter(rates.ReviewPerMinute, rates.ReviewBurst))
 	turnstile := middleware.Turnstile()
 
 	fileBody := middleware.MaxBody(controllers.MaxPDFBytes + 1<<20)
@@ -156,6 +161,9 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		v1.GET("/usage", controllers.APIUsage)
 	}
 
+	// Public: what the link at the bottom of an email does. The token is the proof; it can only switch emails off.
+	r.POST("/email/unsubscribe", authLimit, smallBody, controllers.Unsubscribe)
+
 	// Public: a summary its owner chose to share. Anyone with the link can read it.
 	r.GET("/shared/:token", authLimit, controllers.SharedDocument)
 
@@ -190,6 +198,14 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		authorized.GET("/account/export", exportLimit, controllers.ExportAccount)
 		authorized.DELETE("/account", authLimit, smallBody, controllers.DeleteAccount)
 		authorized.PUT("/account/instructions", smallBody, controllers.SetInstructions)
+		authorized.GET("/account/email-preferences", controllers.EmailPreferences)
+		authorized.PUT("/account/email-preferences", smallBody, controllers.SetEmailPreferences)
+
+		// Spaced repetition: rate a flashcard, see what is due. No model call.
+		authorized.POST("/documents/:id/cards/review", reviewLimit, smallBody, controllers.RateCard)
+		authorized.GET("/documents/:id/cards/progress", reviewLimit, controllers.CardProgress)
+		authorized.GET("/study/due", reviewLimit, controllers.DueCards)
+		authorized.GET("/study/stats", reviewLimit, controllers.StudyStats)
 
 		// Saved documents.
 		authorized.GET("/documents", controllers.ListDocuments)

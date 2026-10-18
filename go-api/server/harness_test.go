@@ -342,6 +342,7 @@ var generousRates = Rates{
 	SummarizeUserPerMinute: 1000, SummarizeUserBurst: 1000,
 	ChatPerMinute: 1000, ChatBurst: 1000,
 	ExportPerMinute: 1000, ExportBurst: 1000,
+	ReviewPerMinute: 1000, ReviewBurst: 1000,
 }
 
 func newApp(t *testing.T) *app { return newAppWithRates(t, generousRates) }

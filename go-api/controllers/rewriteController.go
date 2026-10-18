@@ -3,6 +3,7 @@ package controllers
 import (
 	"ai-summarizer/go-api/initializers"
 	"ai-summarizer/go-api/middleware"
+	"ai-summarizer/go-api/reviews"
 	"bytes"
 	"encoding/json"
 	"log/slog"
@@ -101,5 +102,7 @@ func RewriteDocument(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save the new summary."})
 		return
 	}
+	// The study material went with the old summary (unless the document had none), and so did the progress on its cards.
+	reviews.Keep(document.ID, reviews.StoredCards(document.ID))
 	c.JSON(http.StatusOK, gin.H{"ID": document.ID, "Summary": result.Summary})
 }

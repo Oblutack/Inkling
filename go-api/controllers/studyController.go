@@ -4,6 +4,7 @@ import (
 	"ai-summarizer/go-api/initializers"
 	"ai-summarizer/go-api/middleware"
 	"ai-summarizer/go-api/models"
+	"ai-summarizer/go-api/reviews"
 	"bytes"
 	"database/sql"
 	"encoding/json"
@@ -293,6 +294,10 @@ func StudyDocument(c *gin.Context) {
 	).Error
 	if err != nil {
 		slog.Error("saving study material failed", "document_id", id, "error", err, "request_id", middleware.RequestIDFrom(c))
+	}
+	if body.Kind == kindFlashcards {
+		// New cards replace the old ones: progress on cards that are gone goes with them.
+		reviews.Keep(id, reviews.StoredCards(id))
 	}
 	response["cached"] = false
 	c.JSON(http.StatusOK, response)

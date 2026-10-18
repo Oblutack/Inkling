@@ -5,6 +5,7 @@ import (
 	"ai-summarizer/go-api/initializers"
 	"ai-summarizer/go-api/middleware"
 	"ai-summarizer/go-api/models"
+	"ai-summarizer/go-api/notices"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -65,6 +66,28 @@ func ExportAccount(c *gin.Context) {
 	var usage []usageRow
 	initializers.DB.Raw(`SELECT day::text AS day, summaries, chats FROM daily_usage WHERE user_id = ? ORDER BY day`, user.ID).Scan(&usage)
 
+	// Spaced repetition: how well each flashcard is known (a card is named by the start of the hash of its front), and the
+	// days something was reviewed. And the emails the person chose to receive.
+	type cardRow struct {
+		DocumentID     uint      `json:"documentId"`
+		CardKey        string    `json:"cardKey"`
+		Box            int       `json:"box"`
+		DueOn          string    `json:"dueOn"`
+		Reviews        int       `json:"reviews"`
+		Lapses         int       `json:"lapses"`
+		LastReviewedAt time.Time `json:"lastReviewedAt"`
+	}
+	cardRows := []cardRow{}
+	initializers.DB.Raw(`SELECT document_id, card_key, box, due_on::text AS due_on, reviews, lapses, last_reviewed_at
+		FROM card_reviews WHERE user_id = ? ORDER BY document_id, card_key`, user.ID).Scan(&cardRows)
+	type reviewDay struct {
+		Day   string `json:"day"`
+		Count int    `json:"count"`
+	}
+	reviewDays := []reviewDay{}
+	initializers.DB.Raw(`SELECT day::text AS day, count FROM review_days WHERE user_id = ? ORDER BY day`, user.ID).Scan(&reviewDays)
+	emailPrefs, _ := notices.PrefsOf(user.ID)
+
 	// The keys themselves are never kept, so the export lists what is: their names, when they were made and last used.
 	keyRecords, _ := auth.APIKeysOf(user.ID)
 	keys := apiKeysJSON(keyRecords)
@@ -78,9 +101,11 @@ func ExportAccount(c *gin.Context) {
 			// whether two-step sign-in is on (its secret and recovery codes are never part of an export)
 			"twoFactorEnabled": user.TwoFactorEnabled(),
 		},
-		"documents": docs,
-		"apiKeys":   keys,
-		"usage":     usage,
+		"documents":        docs,
+		"apiKeys":          keys,
+		"usage":            usage,
+		"studyProgress":    gin.H{"cards": cardRows, "days": reviewDays},
+		"emailPreferences": emailPrefs,
 	})
 }
 

@@ -4,6 +4,7 @@ import (
 	"ai-summarizer/go-api/alerts"
 	"ai-summarizer/go-api/controllers"
 	"ai-summarizer/go-api/initializers"
+	"ai-summarizer/go-api/jobs"
 	"ai-summarizer/go-api/mailer"
 	"ai-summarizer/go-api/server"
 	"context"
@@ -69,6 +70,9 @@ func main() {
 	// Alerts (many people at once, the AI budget used up, the AI service failing): emailed to ALERT_EMAIL when it is set,
 	// always written to the log.
 	alerts.Start(context.Background(), alerts.ConfigFromEnv(), m)
+
+	// Scheduled work: the daily flashcard reminder (for people who switched it on). JOBS_ENABLED=false turns it off.
+	jobs.Start(context.Background(), jobs.StudyReminders(m))
 
 	rates := server.DefaultRates
 	if v := os.Getenv("RATE_LIMIT_MULTIPLIER"); v != "" {
