@@ -9,6 +9,12 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Added
 
+- **web:** Share links, text and files to Inkling from another app
+- **web:** Review due flashcards, rate cards, and choose which emails to get
+- **web:** Helpers and texts for flashcard review, email choices and sharing
+- **api:** Review flashcards, choose emails, and stop them with one click
+- **api:** Run scheduled jobs under a lock, and send the daily flashcard reminder
+- **api:** Add the emails a person chose, and spaced repetition for flashcards
 - **web:** A Study mode in the dashboard form and study set cards
 - **web:** Flashcard export helpers and the study mode texts
 - **api:** Make study sets from text, links and files
