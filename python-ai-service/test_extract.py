@@ -559,3 +559,78 @@ def test_a_page_longer_than_the_limit_is_refused_not_cut_short(client, monkeypat
     fake_page(monkeypatch, "<body><p>" + "Long page words. " * 13_000 + "</p></body>")
     r = client.post("/summarize-url", json={"url": "https://news.example/book"})
     assert r.status_code == 413 and "too long" in r.json()["detail"]
+
+
+# --- robots.txt, for pages that are watched ---
+
+
+def _robots(text: str | None, status: int = 200):
+    async def fetch(url):
+        assert url.endswith("/robots.txt")
+        if text is None:
+            raise FetchError(status, "not found")
+        return extract.Fetched("text", text.encode(), "utf-8", url)
+
+    return fetch
+
+
+@pytest.mark.parametrize(
+    ("robots", "allowed"),
+    [
+        (None, True),  # no robots.txt: allowed
+        ("User-agent: *\nDisallow:\n", True),
+        ("User-agent: *\nDisallow: /private/\n", True),  # not this path
+        ("User-agent: *\nDisallow: /news/\n", False),  # this path
+        ("User-agent: Inkling\nDisallow: /\n", False),  # aimed at Inkling
+        ("User-agent: SomeoneElse\nDisallow: /\n", True),  # aimed at another robot
+        ("User-agent: *\nAllow: /news/post\nDisallow: /\n", True),  # an exception listed first is honoured
+        (
+            "User-agent: *\nDisallow: /\nAllow: /news/post\n",
+            False,
+        ),  # rules are read in order: too careful, never too bold
+    ],
+    ids=["none", "empty", "other-path", "this-path", "named", "other-robot", "allow-first", "allow-last"],
+)
+def test_robots_txt_decides_whether_a_page_may_be_watched(robots, allowed):
+    assert asyncio.run(extract.robots_allows("https://news.example/news/post", _robots(robots))) is allowed
+
+
+def test_a_robots_file_that_is_not_text_or_is_too_big_is_ignored():
+    async def html(url):
+        return extract.Fetched("html", b"<html>User-agent: *\nDisallow: /</html>", "utf-8", url)
+
+    async def huge(url):
+        return extract.Fetched(
+            "text", b"User-agent: *\nDisallow: /\n" + b"#" * (extract.MAX_ROBOTS_BYTES + 1), "utf-8", url
+        )
+
+    assert asyncio.run(extract.robots_allows("https://news.example/post", html)) is True
+    assert asyncio.run(extract.robots_allows("https://news.example/post", huge)) is True
+
+
+def test_an_address_that_is_not_http_has_no_robots_to_check():
+    assert asyncio.run(extract.robots_allows("ftp://news.example/x", _robots("User-agent: *\nDisallow: /\n"))) is True
+
+
+def test_watching_a_page_the_site_does_not_want_checked_is_refused_and_reading_it_once_is_not(client, monkeypatch):
+    fake_page(monkeypatch, PAGE)
+
+    async def disallow(url, fetch=None):
+        return False
+
+    monkeypatch.setattr(main, "robots_allows", disallow)
+    refused = client.post("/read-url?watch=true", json={"url": "https://news.example/post"})
+    assert refused.status_code == 422 and "robots.txt" in refused.json()["detail"]
+    once = client.post("/read-url", json={"url": "https://news.example/post"})
+    assert once.status_code == 200 and once.json()["filename"] == "The real title"
+
+
+def test_watching_an_allowed_page_reads_it_as_usual(client, monkeypatch):
+    fake_page(monkeypatch, PAGE)
+
+    async def allow(url, fetch=None):
+        return True
+
+    monkeypatch.setattr(main, "robots_allows", allow)
+    r = client.post("/read-url?watch=true", json={"url": "https://news.example/post"})
+    assert r.status_code == 200 and r.json()["filename"] == "The real title" and "summary" not in r.json()

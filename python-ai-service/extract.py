@@ -15,9 +15,11 @@ import ipaddress
 import re
 import socket
 import zipfile
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from typing import Optional
+from urllib import robotparser
 from urllib.parse import urljoin, urlsplit
 from xml.etree import ElementTree
 
@@ -378,6 +380,29 @@ async def _fetch(raw_url: str, client: Optional[httpx.AsyncClient]) -> Fetched:
     finally:
         if owns_client:
             await client.aclose()
+
+
+ROBOTS_NAME = "Inkling"
+MAX_ROBOTS_BYTES = 512 * 1024
+
+
+async def robots_allows(raw_url: str, fetch: Optional[Callable[[str], Awaitable[Fetched]]] = None) -> bool:
+    """Whether the site's robots.txt lets Inkling open this address by itself. Used for pages that are checked over
+    and over, not for a page a person asks to be read once. A site with no robots.txt, or one that cannot be read,
+    allows it: the file only counts when it can be read and says no."""
+    parts = urlsplit(raw_url)
+    if parts.scheme not in ("http", "https") or not parts.netloc:
+        return True
+    robots_url = f"{parts.scheme}://{parts.netloc}/robots.txt"
+    try:
+        page = await (fetch or fetch_page)(robots_url)
+    except FetchError:
+        return True
+    if page.kind != "text" or len(page.body) > MAX_ROBOTS_BYTES:
+        return True
+    parser = robotparser.RobotFileParser()
+    parser.parse(decode_body(page.body, page.charset).splitlines())
+    return parser.can_fetch(ROBOTS_NAME, raw_url)
 
 
 def _check_peer(response: httpx.Response) -> None:

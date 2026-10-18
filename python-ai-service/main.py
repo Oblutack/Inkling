@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from pypdf import PdfReader
 
 import compare
+import dates
 import embeddings
 import extraction
 import ocr
@@ -35,6 +36,7 @@ from extract import (
     fetch_page,
     html_to_text,
     office_text,
+    robots_allows,
     title_from_url,
 )
 from internal_auth import InternalAuthMiddleware
@@ -728,8 +730,17 @@ async def read_files(
 
 
 @app.post("/read-url")
-async def read_url(payload: UrlPayload, ocr_pages: bool = Query(False, alias="ocr")):
-    """The text of the page at a web address, with no summary made."""
+async def read_url(
+    payload: UrlPayload,
+    ocr_pages: bool = Query(False, alias="ocr"),
+    watch: bool = Query(False),
+):
+    """The text of the page at a web address, with no summary made. With `watch` the page is one that will be opened
+    again and again (a page someone follows), so the site's robots.txt is honoured first."""
+    if watch and not await robots_allows(payload.url):
+        raise HTTPException(
+            422, "That site asks not to be checked automatically (its robots.txt), so Inkling cannot watch that page."
+        )
     title, text = await read_web_page(payload.url, ocr_pages)
     check_text(text)
     return {"filename": title, "text": text}
@@ -1031,7 +1042,7 @@ async def generate_until_usable(prompt: str, parse: Callable[[str], object | Non
         except Exception as exc:
             raise to_http_error(exc, failure) from exc
         parsed = parse(reply)
-        if parsed:
+        if parsed is not None:  # an empty list is an answer; only an unreadable reply is asked again
             return parsed
     raise HTTPException(502, "The language model did not return a usable result. Please try again.")
 
@@ -1060,6 +1071,30 @@ async def study_material(payload: StudyPayload):
         questions = await generate_until_usable(prompt, parse_quiz, "The language model failed to write a quiz.")
         return {"kind": "quiz", "questions": questions}
     raise HTTPException(422, "kind must be 'flashcards' or 'quiz'")
+
+
+class DatesPayload(BaseModel):
+    name: str = ""
+    text: str
+    language: Optional[str] = None
+
+
+@app.post("/dates")
+async def find_dates(payload: DatesPayload):
+    """The dates and deadlines a document states, each with its own sentence as the quote and a check that the date is
+    really in it (see dates.py). A document with no sentence that can hold a date costs no model call."""
+    check_text(payload.text)
+    if payload.language and not is_valid_language(payload.language):
+        raise HTTPException(422, "Unsupported language")
+    sentences = dates.date_sentences(payload.text)
+    suspect = extraction.injection_sentences(payload.text)
+    if not sentences:
+        return {"dates": [], "suspicious": bool(suspect), "sentences": 0}
+    prompt = dates.dates_prompt(payload.name, sentences, payload.language)
+    items = await generate_until_usable(prompt, dates.parse_dates, "The language model failed to find the dates.")
+    found = dates.assemble(items, sentences, suspect)
+    flagged = any(any(s.key in key for key in suspect) for s in sentences)
+    return {"dates": found, "suspicious": flagged, "sentences": len(sentences)}
 
 
 class FieldIn(BaseModel):
