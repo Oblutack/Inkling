@@ -131,3 +131,37 @@ export interface Usage {
   chats: { used: number; limit: number };
   resetsAt: string;
 }
+
+// The emails a person chose to receive from Inkling, and their time zone (an IANA name, "" until the browser told us).
+export interface EmailPrefs {
+  watch: boolean;
+  reminders: boolean;
+  digest: boolean;
+  timeZone: string;
+}
+
+// A flashcard due for review, with the document it comes from.
+export interface DueCard {
+  documentId: number;
+  title: string;
+  front: string;
+  back: string;
+  box: number;
+  dueOn: string;
+}
+
+// A person's review record: cards due today, cards reviewed today, and the days in a row with at least one review.
+export interface StudyStats {
+  dueToday: number;
+  reviewedToday: number;
+  streak: number;
+  totalReviews: number;
+}
+
+// How well a card of a set is known (only cards that were rated are listed).
+export interface CardProgress {
+  front: string;
+  box: number;
+  dueOn: string;
+  due: boolean;
+}
