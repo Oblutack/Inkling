@@ -91,6 +91,8 @@ def test_only_vocabulary_that_occurs_in_the_summary_is_kept_once():
             ("mortgage", "Hypothek"),
             ("security  deposit", "x"),
             ("pets", "Haustiere"),
+            ("deposi", "a part of a word"),
+            ("500", "500"),
         ],
     )["vocabulary"]
     assert [w["word"] for w in words] == ["deposit", "pets"]

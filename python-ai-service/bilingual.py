@@ -122,12 +122,17 @@ def assemble(blocks: list[Block], translated: dict[int, str], vocabulary: list[t
                 "figuresKept": _numbers_match(block.text, target) if target else True,
             }
         )
-    whole = " ".join(b.text for b in blocks).lower()
+    whole = " ".join(" ".join(b.text for b in blocks).lower().split())
     seen: set[str] = set()
     words = []
     for word, translation in vocabulary:
         key = " ".join(word.lower().split())
-        if not key or key in seen or key not in " ".join(whole.split()):
+        # a whole word or phrase of the summary (a pair the model wrote the wrong way round is not)
+        if (
+            not any(ch.isalpha() for ch in key)
+            or key in seen
+            or not re.search(rf"(?<!\w){re.escape(key)}(?!\w)", whole)
+        ):
             continue
         seen.add(key)
         words.append({"word": word, "translation": translation})
