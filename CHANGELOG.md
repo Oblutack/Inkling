@@ -9,6 +9,11 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Added
 
+- **extension:** Explain the selection, version 1.2.0
+- **web:** Terms panel, side-by-side translation, highlights in the PDF viewer, Obsidian export
+- **web:** Helpers and texts for terms, bilingual view, highlights and Obsidian notes
+- **api:** Glossary, bilingual, highlights, notes export and explain routes
+- **ai:** Glossary, bilingual summary, explain, and notes as chat context
 - **web:** Check a contract, and ask the chat by voice with answers read aloud
 - **web:** Helpers and texts for the contract checklist and talking to a document
 - **api:** Contract checklists and spoken questions
