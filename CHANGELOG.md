@@ -170,6 +170,10 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Fixed
 
+- **ai:** A short label with its value is checked as a statement, not taken for a heading
+- **web:** A note named after its file drops the file's extension
+- **ai:** Translated figures match however the language writes them
+- **ai:** Bilingual vocabulary keeps only whole words, never bare numbers
 - **ai-service:** Do not call a number in a document's name an invented number
 - **ai-service:** Treat the rest of a note to the model as suspect
 - **extension:** Open the add-on's pages from a page in the Firefox test
