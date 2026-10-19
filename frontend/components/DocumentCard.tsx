@@ -1,12 +1,13 @@
 "use client";
 import Markdown from "markdown-to-jsx";
 import { motion } from "framer-motion";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import dynamic from "next/dynamic";
 import type { Document, FileInfo, ProofPassage, ProofResult } from "../types";
 import { API_URL, apiError } from "../lib/api";
-import { downloadMarkdown, downloadWord } from "../lib/exportDoc";
+import { downloadBlob, downloadMarkdown, downloadWord } from "../lib/exportDoc";
+import { noteFileName, noteMarkdown, type Note } from "../lib/obsidian";
 import { isAudioFile, isPdfFile } from "../lib/links";
 import { createMarkdownOptions } from "../lib/markdown";
 import { tidyMarkdown } from "../lib/markdownText";
@@ -20,9 +21,14 @@ import PodcastPlayer from "./PodcastPlayer";
 import ProofView from "./ProofView";
 import ReadAloudPlayer, { ReadAloudToggle } from "./ReadAloudPlayer";
 import ComparePanel from "./ComparePanel";
+import BilingualPanel from "./BilingualPanel";
 import ChecklistPanel from "./ChecklistPanel";
 import DatesPanel from "./DatesPanel";
 import ExtractPanel from "./ExtractPanel";
+import GlossaryPanel from "./GlossaryPanel";
+import HighlightsPanel from "./HighlightsPanel";
+import TermMark from "./TermMark";
+import { markTerms, type Glossary } from "../lib/glossary";
 import MindMap from "./MindMap";
 import RewritePanel from "./RewritePanel";
 import ShareControl from "./ShareControl";
@@ -78,6 +84,13 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
   const [compareOpen, setCompareOpen] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [datesOpen, setDatesOpen] = useState(false);
+  const [bilingualOpen, setBilingualOpen] = useState(false);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const [highlightsOpen, setHighlightsOpen] = useState(false);
+  // Changes when a highlight is made, changed or removed in the viewer, so the list of them is read again.
+  const [highlightsVersion, setHighlightsVersion] = useState(0);
+  // The glossary, once the Terms panel has it: the terms are underlined in the summary.
+  const [glossary, setGlossary] = useState<Glossary | null>(null);
   const [checklistOpen, setChecklistOpen] = useState(false);
   // The quieter actions (export, email, share, rewrite) stay tucked away, unless there is a link to show.
   const [moreOpen, setMoreOpen] = useState(Boolean(doc.shareToken));
@@ -127,6 +140,18 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
     const element = document.getElementById(`doc-content-${doc.ID}`);
     if (!element) return;
     saveElementAsPdf(element, doc.Filename.replace(/\.[^/.]+$/, "") + "-summary.pdf");
+  };
+
+  // The document as a note for Obsidian or Notion: front matter, the summary and its flashcards, as one Markdown file.
+  const downloadNote = async () => {
+    setProofError("");
+    try {
+      const response = await axios.get<Note>(`${API_URL}/documents/${doc.ID}/note`);
+      const blob = new Blob([noteMarkdown(response.data)], { type: "text/markdown;charset=utf-8" });
+      downloadBlob(blob, noteFileName(response.data.title, new Set()));
+    } catch (err) {
+      setProofError(apiError(err, t("doc.obsidianFailed")));
+    }
   };
 
   const saveTitle = async (e: React.FormEvent) => {
@@ -180,12 +205,25 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
     window.getSelection()?.removeAllRanges();
   };
 
+  const summaryOptions = useMemo(
+    () => ({
+      ...markdownOptions,
+      overrides: { ...markdownOptions.overrides, a: { component: TermMark, props: { terms: glossary?.terms ?? [] } } },
+    }),
+    [glossary]
+  );
+  const summaryMarkdown = useMemo(() => {
+    const text = tidyMarkdown(doc.Summary);
+    return glossary && glossary.terms.length > 0 ? markTerms(text, glossary.terms) : text;
+  }, [doc.Summary, glossary]);
+
   const summaryChanged = (summary: string) => {
     onChange(doc.ID, { Summary: summary });
     // Everything made from the old summary is gone with it.
     setProof(null);
     setProofOpen(false);
     setPodcastOpen(false);
+    setBilingualOpen(false);
     // The cards of a study set were made from the text, so they are still right.
     if (!studySet) setStudyOpen(false);
     setRewriteOpen(false);
@@ -299,7 +337,7 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
               }
             />
           ) : (
-            <Markdown options={markdownOptions}>{tidyMarkdown(doc.Summary)}</Markdown>
+            <Markdown options={summaryOptions}>{summaryMarkdown}</Markdown>
           )}
         </div>
       </div>
@@ -377,6 +415,9 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
                 <ShareControl documentId={doc.ID} token={doc.shareToken} onChange={(shareToken) => onChange(doc.ID, { shareToken })} />
               </>
             )}
+            <button type="button" onClick={() => void downloadNote()} className={textButton}>
+              {t("doc.obsidian")}
+            </button>
             {doc.hasContent && (
               <button type="button" onClick={() => setRewriteOpen((open) => !open)} className={textButton} aria-expanded={rewriteOpen}>
                 {rewriteOpen ? t("doc.closeRewrite") : studySet ? t("doc.makeSummary") : t("doc.rewrite")}
@@ -390,6 +431,21 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
             {doc.hasContent && (
               <button type="button" onClick={() => setExtractOpen((open) => !open)} className={textButton} aria-expanded={extractOpen}>
                 {extractOpen ? t("extract.close") : t("extract.open")}
+              </button>
+            )}
+            {!studySet && (
+              <button type="button" onClick={() => setBilingualOpen((open) => !open)} className={textButton} aria-expanded={bilingualOpen}>
+                {bilingualOpen ? t("bilingual.close") : t("bilingual.open")}
+              </button>
+            )}
+            {doc.hasContent && (
+              <button type="button" onClick={() => setHighlightsOpen((open) => !open)} className={textButton} aria-expanded={highlightsOpen}>
+                {highlightsOpen ? t("highlights.close") : t("highlights.open")}
+              </button>
+            )}
+            {doc.hasContent && (
+              <button type="button" onClick={() => setGlossaryOpen((open) => !open)} className={textButton} aria-expanded={glossaryOpen}>
+                {glossaryOpen ? t("glossary.close") : t("glossary.open")}
               </button>
             )}
             {doc.hasContent && (
@@ -423,6 +479,16 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
       {compareOpen && doc.hasContent && <ComparePanel doc={doc} />}
       {extractOpen && doc.hasContent && <ExtractPanel doc={doc} />}
       {datesOpen && doc.hasContent && <DatesPanel doc={doc} />}
+      {glossaryOpen && doc.hasContent && <GlossaryPanel doc={doc} onChange={setGlossary} />}
+      {highlightsOpen && (
+        <HighlightsPanel
+          doc={doc}
+          files={pdfFiles}
+          version={highlightsVersion}
+          onOpen={(file, page, quote) => setViewing({ file, page, passage: quote })}
+        />
+      )}
+      {bilingualOpen && !studySet && <BilingualPanel doc={doc} />}
       {checklistOpen && doc.hasContent && <ChecklistPanel doc={doc} />}
       {textOpen && doc.hasContent && !recordingFile && <OriginalText documentId={doc.ID} transcript={transcript} />}
       {recordingOpen && recordingFile && <RecordingPanel documentId={doc.ID} file={recordingFile} seek={playAt} />}
@@ -440,6 +506,7 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
           page={viewing.page}
           passage={viewing.passage}
           onClose={() => setViewing(null)}
+          onHighlightsChanged={() => setHighlightsVersion((v) => v + 1)}
         />
       )}
     </motion.div>

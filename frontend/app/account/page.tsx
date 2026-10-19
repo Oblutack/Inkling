@@ -12,6 +12,8 @@ import EmailPreferences from "../../components/EmailPreferences";
 import TwoFactor from "../../components/TwoFactor";
 import { useT } from "../../components/I18nProvider";
 import type { MessageKey, Params } from "../../lib/i18n";
+import { downloadBlob } from "../../lib/exportDoc";
+import { libraryZip, libraryZipName, type Note } from "../../lib/obsidian";
 
 type Translate = (key: MessageKey, params?: Params) => string;
 
@@ -128,6 +130,7 @@ export default function AccountPage() {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [notes, setNotes] = useState({ busy: false, message: "" });
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -225,6 +228,25 @@ export default function AccountPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       setError(apiError(err, t("account.exportFailed")));
+    }
+  };
+
+  // The saved summaries as one zip of Markdown notes (for Obsidian, Notion and the like), made here from what the API sends.
+  const downloadNotes = async () => {
+    setError("");
+    setNotes({ busy: true, message: "" });
+    try {
+      const response = await axios.get<{ notes: Note[]; truncated: boolean }>(`${API_URL}/library/notes`);
+      if (response.data.notes.length === 0) {
+        setNotes({ busy: false, message: t("account.notesEmpty") });
+        return;
+      }
+      const zip = libraryZip(response.data.notes);
+      downloadBlob(new Blob([zip], { type: "application/zip" }), libraryZipName());
+      setNotes({ busy: false, message: response.data.truncated ? t("account.notesTruncated", { n: response.data.notes.length }) : "" });
+    } catch (err) {
+      setNotes({ busy: false, message: "" });
+      setError(apiError(err, t("account.notesFailed")));
     }
   };
 
@@ -345,6 +367,15 @@ export default function AccountPage() {
       <Section title={t("account.data")}>
         <p>{t("account.dataText")}</p>
         <SecondaryButton onClick={exportData}>{t("account.download")}</SecondaryButton>
+        <p className="mt-6">{t("account.notesText")}</p>
+        <SecondaryButton onClick={() => void downloadNotes()} disabled={notes.busy}>
+          {notes.busy ? t("account.notesWorking") : t("account.notesDownload")}
+        </SecondaryButton>
+        {notes.message && (
+          <p className="mt-2 text-sm font-medium" role="status" data-testid="notes-message">
+            {notes.message}
+          </p>
+        )}
       </Section>
 
       <Section title={t("account.delete")}>
