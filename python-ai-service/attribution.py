@@ -119,7 +119,13 @@ def summary_units(summary: str) -> list[Unit]:
         if not text:
             continue
         words = text.split()
-        label_like = len(words) <= 4 and not re.search(r"[.!?]$", text) and not any(c.isdigit() for c in text)
+        # "Key Points" is a label; "Tenant: Jordan Ellis" (a label with its value) states something
+        label_like = (
+            len(words) <= 4
+            and not re.search(r"[.!?]$", text)
+            and not any(c.isdigit() for c in text)
+            and not re.search(r":\s*\S", text)
+        )
         if stripped.startswith("#") or label_like:
             units.append(Unit(text.rstrip(":"), "heading"))
             continue

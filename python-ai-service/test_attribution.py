@@ -41,6 +41,16 @@ def test_short_labels_are_headings_but_short_facts_are_not():
     assert kinds["Profits rose 5%."] == "claim" and kinds["It works well."] == "claim"
 
 
+def test_a_label_with_its_value_is_a_statement_not_a_heading():
+    summary = "- **Parties**\n  - Tenant: Jordan Ellis  \n  - Landlord: Harbour Lane Properties Ltd"
+    kinds = {u.text: u.kind for u in summary_units(summary)}
+    assert kinds == {
+        "Parties": "heading",
+        "Tenant: Jordan Ellis": "claim",
+        "Landlord: Harbour Lane Properties Ltd": "claim",
+    }
+
+
 def test_abbreviations_do_not_split_sentences():
     (unit,) = summary_units("Parts, e.g. filters and belts, wear out. ")
     assert unit.text == "Parts, e.g. filters and belts, wear out."
