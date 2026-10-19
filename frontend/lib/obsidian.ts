@@ -75,6 +75,8 @@ export function noteMarkdown(note: Note): string {
 export function noteFileName(title: string, used: Set<string>): string {
   const base =
     title
+      // a document named after its file ("lease.pdf") gives "lease.md", not "lease.pdf.md"
+      .replace(/\.(pdf|docx?|pptx?|txt|md|html?|jpe?g|png|heic|webp|mp3|m4a|wav|ogg|webm)$/i, "")
       .replace(/[\\/:*?"<>|#^[\]\u0000-\u001f]+/g, " ")
       .replace(/\s+/g, " ")
       .trim()

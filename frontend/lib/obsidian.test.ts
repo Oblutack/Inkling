@@ -163,6 +163,9 @@ describe("noteFileName", () => {
     expect(noteFileName("Договор аренды #1", used)).toBe("Договор аренды 1.md");
     expect(noteFileName("   ", used)).toBe("Untitled.md");
     expect(noteFileName("...hidden", used)).toBe("hidden.md");
+    expect(noteFileName("lease-agreement.PDF", used)).toBe("lease-agreement.md");
+    expect(noteFileName("Meeting.m4a", used)).toBe("Meeting.md");
+    expect(noteFileName("Version 2.5", used)).toBe("Version 2.5.md");
   });
 
   it("numbers a name that is taken, whatever its case", () => {
