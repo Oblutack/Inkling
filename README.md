@@ -427,7 +427,7 @@ The dashboard covers overview, traffic, latency, the language model (including t
 
 ## Testing
 
-The project has **1,400+ automated tests** across the stack (about 380 Go tests, 680 for the AI service, 190 frontend unit tests and over 200 browser tests), and every one runs in CI on each push and pull request, together with linting, type checking and vulnerability scanning.
+The project has **2,000+ automated tests** across the stack (about 570 Go tests, 890 for the AI service, 340 frontend unit tests, 50 for the browser extension and about 350 browser tests), and every one runs in CI on each push and pull request, together with linting, type checking and vulnerability scanning.
 
 | Layer | What runs | Where |
 | --- | --- | --- |
@@ -538,6 +538,10 @@ Schema changes are SQL migrations in [`go-api/migrations/`](go-api/migrations), 
 │   ├── metrics/              Prometheus metrics
 │   ├── auth/                 Tokens, sessions, cookies, single-use email tokens
 │   ├── mailer/               log / Brevo / Resend providers and email templates
+│   ├── jobs/                 Scheduled work: reminders, page watches, the weekly reading digest
+│   ├── notices/              Email preferences, unsubscribe links, at most one notice of a kind a day
+│   ├── reviews/              Flashcard review scheduling (spaced repetition)
+│   ├── alerts/               Owner alerts: busy site, AI budget used up, AI service failing
 │   ├── migrations/           Embedded SQL migrations
 │   └── testutil/             Per-package Postgres schemas for integration tests
 ├── extension/                The browser extension for Chrome and Firefox (Manifest V3, no build step, no dependencies), with its own tests
@@ -551,6 +555,16 @@ Schema changes are SQL migrations in [`go-api/migrations/`](go-api/migrations), 
 │   ├── evals/search/         Test library and questions for measuring search quality (run before changing the model)
 │   ├── citations.py          Cleans the model's [n] markers so each points at a real passage
 │   ├── attribution.py        Checks each summary sentence against the document (the proof check)
+│   ├── compare.py            Finds what changed between two versions; the model only explains it
+│   ├── extraction.py         Fields and tables read from documents, each value checked against its quote
+│   ├── extract.py            Words out of Word and PowerPoint files and web pages (robots.txt respected)
+│   ├── ocr.py, photos.py     Text from scanned pages and photos of pages
+│   ├── transcribe.py         Recordings and spoken questions (Whisper)
+│   ├── dates.py              Dates and deadlines, each confirmed in its own sentence
+│   ├── checklists.py         Contract checklists: found, unclear or missing, with the exact words
+│   ├── glossary.py           Specialist terms, kept only when the document uses them
+│   ├── bilingual.py          The summary line by line in a second language, figures checked
+│   ├── injection.py          Spots text in a document written to steer the AI rather than for the reader
 │   ├── podcast.py            Two-host script prompt, and reading the model's transcript back
 │   ├── cache.py              Summary cache
 │   ├── logging_setup.py      JSON logs and request IDs
