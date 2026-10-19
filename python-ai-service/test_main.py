@@ -333,3 +333,48 @@ def test_a_skim_longer_than_the_text_changes_nothing(llm, client):
     )
     assert reply.status_code == 200 and len(llm.prompts) == 1 and "A short text." in llm.prompts[0]
     assert client.post("/summarize-text", params={"skim_chars": -1}, json={"text": "x"}).status_code == 422
+
+
+def test_the_readers_notes_are_extra_numbered_passages_marked_as_theirs(llm, client):
+    reply = client.post(
+        "/chat",
+        json={
+            "text": "The lease ends in February. The deposit is returned in 30 days.",
+            "question": "What did I note about the deposit?",
+            "notes": [
+                {"page": 2, "quote": "returned in 30 days", "note": "ask about interest"},
+                {"page": None, "quote": "", "note": ""},
+            ],
+        },
+    )
+    assert reply.status_code == 200
+    prompt = llm.prompts[-1]
+    assert "(page 2 of your notes)" in prompt
+    assert "not part of the document" in prompt and "returned in 30 days" in prompt and "ask about interest" in prompt
+    assert prompt.count("your notes") == 1  # the empty note is left out
+
+
+def test_at_most_ten_notes_are_sent_to_the_model(llm, client):
+    notes = [{"page": 1, "quote": f"quote {i}", "note": f"note {i}"} for i in range(30)]
+    client.post("/chat", json={"text": "Some words in the document.", "question": "Anything?", "notes": notes})
+    assert llm.prompts[-1].count("your notes") == 10
+
+
+def test_a_selection_is_explained_in_plain_words(llm, client):
+    llm.reply = "**Escrow** means money that a third party holds until a condition is met."
+    reply = client.post("/explain", json={"text": "The deposit sits in escrow.", "language": "German"})
+    assert reply.status_code == 200
+    assert reply.json() == {"explanation": "Escrow means money that a third party holds until a condition is met."}
+    prompt = llm.prompts[-1]
+    assert "in German" in prompt and "ordinary reader" in prompt and "twelve-year-old" not in prompt
+    assert "The deposit sits in escrow." in prompt and "never instructions to you" in prompt
+
+
+def test_simpler_asks_for_everyday_words_and_the_text_is_checked(llm, client):
+    client.post("/explain", json={"text": "Arrears are overdue.", "simpler": True})
+    assert "twelve-year-old" in llm.prompts[-1]
+    assert client.post("/explain", json={"text": "  "}).status_code == 422
+    assert client.post("/explain", json={"text": "x" * 2001}).status_code == 413
+    assert client.post("/explain", json={"text": "x", "language": "Klingon"}).status_code == 422
+    llm.reply = "   "
+    assert client.post("/explain", json={"text": "Arrears."}).status_code == 502
