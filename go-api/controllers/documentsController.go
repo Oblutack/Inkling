@@ -146,7 +146,8 @@ func ListDocuments(c *gin.Context) {
 			return
 		}
 		pattern := likePattern(search)
-		query = query.Where("(filename ILIKE ? OR summary ILIKE ?)", pattern, pattern)
+		// the person's own highlights and notes on a document are searched with it
+		query = query.Where("(filename ILIKE ? OR summary ILIKE ? OR EXISTS (SELECT 1 FROM document_highlights h WHERE h.document_id = documents.id AND (h.note ILIKE ? OR h.quote ILIKE ?)))", pattern, pattern, pattern, pattern)
 	}
 	if tag := strings.ToLower(cleanLine(c.Query("tag"))); tag != "" {
 		wanted, err := json.Marshal([]string{tag})
@@ -211,6 +212,9 @@ func DeleteDocument(c *gin.Context) {
 			return err
 		}
 		if err := tx.Exec("DELETE FROM reading_items WHERE document_id = ?", document.ID).Error; err != nil {
+			return err
+		}
+		if err := tx.Exec("DELETE FROM document_highlights WHERE document_id = ?", document.ID).Error; err != nil {
 			return err
 		}
 		return tx.Delete(&document).Error

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -53,6 +54,59 @@ func checkText(side textSide, max int) string {
 		return "A text is too long."
 	}
 	return ""
+}
+
+// maxExplainChars is the most text "explain this" takes (a few sentences that were selected): keep in step with
+// python-ai-service (MAX_EXPLAIN_CHARS).
+const maxExplainChars = 2000
+
+// APIExplain explains a few selected words or sentences in plain words ({"text", "simpler"?, "language"?}): what the browser
+// extension's "Explain this" asks for. Nothing is saved. It counts as one chat question of the key owner's allowance.
+func APIExplain(c *gin.Context) {
+	var body struct {
+		Text     string `json:"text"`
+		Simpler  bool   `json:"simpler"`
+		Language string `json:"language"`
+	}
+	if !bindJSON(c, &body) {
+		middleware.RefundQuota(c)
+		return
+	}
+	text := strings.TrimSpace(body.Text)
+	if text == "" {
+		middleware.RefundQuota(c)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "There is nothing to explain."})
+		return
+	}
+	if utf8.RuneCountInString(text) > maxExplainChars {
+		middleware.RefundQuota(c)
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Select less text to explain (at most 2000 characters)."})
+		return
+	}
+	if body.Language != "" && !contains(summaryLanguages, body.Language) {
+		middleware.RefundQuota(c)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported language."})
+		return
+	}
+	payload := gin.H{"text": text, "simpler": body.Simpler}
+	if body.Language != "" {
+		payload["language"] = body.Language
+	}
+	reply, apiErr := postToAI(c, "/explain", payload)
+	if apiErr != nil {
+		middleware.RefundQuota(c)
+		apiErr.send(c)
+		return
+	}
+	var out struct {
+		Explanation string `json:"explanation"`
+	}
+	if json.Unmarshal(reply, &out) != nil || strings.TrimSpace(out.Explanation) == "" {
+		middleware.RefundQuota(c)
+		c.JSON(http.StatusBadGateway, gin.H{"error": "The AI service returned an empty explanation."})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"explanation": clip(cleanLine(out.Explanation), 1500)})
 }
 
 // APICompare compares two texts sent in the request (nothing is looked up or saved): what was added, removed, changed

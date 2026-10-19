@@ -158,6 +158,7 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		v1.POST("/summarize-url", summarizeUserLimit, smallBody, summaries, keyDaily, dailyBudget, controllers.APISummarizeURL)
 		v1.POST("/compare", summarizeUserLimit, compareBody, summaries, keyDaily, dailyBudget, controllers.APICompare)
 		v1.POST("/extract", summarizeUserLimit, extractBody, summaries, keyDaily, dailyBudget, controllers.APIExtract)
+		v1.POST("/explain", chatUserLimit, smallBody, middleware.Quota(middleware.QuotaChats), keyDaily, dailyBudget, controllers.APIExplain)
 		v1.POST("/reading-list", summarizeUserLimit, textBody, summaries, keyDaily, dailyBudget, controllers.SaveForLater)
 		v1.GET("/usage", controllers.APIUsage)
 	}
@@ -197,6 +198,8 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		authorized.POST("/account/api-keys", authLimit, smallBody, middleware.RequireVerifiedEmail, controllers.CreateAPIKey)
 		authorized.DELETE("/account/api-keys/:id", authLimit, controllers.RevokeAPIKey)
 		authorized.GET("/account/export", exportLimit, controllers.ExportAccount)
+		authorized.GET("/library/notes", exportLimit, controllers.LibraryNotes)
+		authorized.GET("/documents/:id/note", exportLimit, controllers.DocumentNote)
 		authorized.DELETE("/account", authLimit, smallBody, controllers.DeleteAccount)
 		authorized.PUT("/account/instructions", smallBody, controllers.SetInstructions)
 		authorized.GET("/account/email-preferences", controllers.EmailPreferences)
@@ -232,6 +235,11 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		authorized.GET("/documents/:id/files/:fileId", controllers.DocumentFile)
 		authorized.GET("/documents/:id/text", controllers.DocumentText)
 		authorized.GET("/documents/:id/dates", controllers.DocumentDates)
+		authorized.GET("/documents/:id/glossary", controllers.DocumentGlossary)
+		authorized.GET("/documents/:id/highlights", controllers.ListHighlights)
+		authorized.POST("/documents/:id/highlights", smallBody, controllers.CreateHighlight)
+		authorized.PUT("/highlights/:hid", smallBody, controllers.UpdateHighlight)
+		authorized.DELETE("/highlights/:hid", controllers.DeleteHighlight)
 		authorized.POST("/documents/:id/proof", proofUserLimit, controllers.CheckDocumentSummary)
 
 		// Work that costs an LLM call: signed in (and verified, when required), rate limited, then
@@ -250,6 +258,8 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		verified.POST("/documents/:id/suggestions", chatUserLimit, dailyBudget, controllers.SuggestQuestions)
 		verified.POST("/voice/transcribe", chatUserLimit, middleware.MaxBody(controllers.VoiceBodyBytes), dailyBudget, controllers.TranscribeVoice)
 		verified.POST("/documents/:id/dates", chatUserLimit, dailyBudget, controllers.FindDocumentDates)
+		verified.POST("/documents/:id/glossary", chatUserLimit, smallBody, controllers.ReplayStoredGlossary, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.FindGlossary)
+		verified.POST("/documents/:id/bilingual", chatUserLimit, smallBody, controllers.ReplayStoredBilingual, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.MakeBilingual)
 		verified.POST("/documents/:id/checklist", chatUserLimit, smallBody, controllers.ReplayStoredChecklist, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.CheckContract)
 		verified.POST("/documents/:id/study", chatUserLimit, smallBody, controllers.ReplayStoredStudy, middleware.Quota(middleware.QuotaChats), dailyBudget, controllers.StudyDocument)
 		// A document read only to be studied: no summary is made, the flashcards are, and the document is saved with them.

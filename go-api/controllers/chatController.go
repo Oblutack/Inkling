@@ -86,7 +86,7 @@ func ChatWithDocument(c *gin.Context) {
 		return
 	}
 
-	payload, err := json.Marshal(gin.H{"text": document.Content, "question": body.Question, "history": body.History})
+	payload, err := json.Marshal(gin.H{"text": document.Content, "question": body.Question, "history": body.History, "notes": chatNotesFor(document.ID)})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to prepare the request."})
 		return

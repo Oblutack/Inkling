@@ -103,6 +103,35 @@ func ExportAccount(c *gin.Context) {
 		(SELECT count(*) FROM watch_changes c WHERE c.watch_id = w.id) AS changes
 		FROM page_watches w WHERE w.user_id = ? ORDER BY w.id`, user.ID).Scan(&watchRows)
 
+	// What was saved to read later, the highlights and notes, and the exams taken (the questions themselves live in the sets).
+	type readingExport struct {
+		DocumentID uint       `json:"documentId"`
+		URL        string     `json:"url"`
+		SavedAt    time.Time  `json:"savedAt"`
+		ReadAt     *time.Time `json:"readAt"`
+		ArchivedAt *time.Time `json:"archivedAt"`
+	}
+	readingRows := []readingExport{}
+	initializers.DB.Raw(`SELECT document_id, url, saved_at, read_at, archived_at FROM reading_items WHERE user_id = ? ORDER BY saved_at`, user.ID).Scan(&readingRows)
+	type highlightExport struct {
+		DocumentID uint      `json:"documentId"`
+		Page       int       `json:"page"`
+		Quote      string    `json:"quote"`
+		Note       string    `json:"note"`
+		CreatedAt  time.Time `json:"createdAt"`
+	}
+	highlightRows := []highlightExport{}
+	initializers.DB.Raw(`SELECT document_id, page, quote, note, created_at FROM document_highlights WHERE user_id = ? ORDER BY document_id, page, id`, user.ID).Scan(&highlightRows)
+	type examExport struct {
+		Tag        string    `json:"tag"`
+		Questions  int       `json:"questions"`
+		Correct    int       `json:"correct"`
+		Seconds    int       `json:"seconds"`
+		FinishedAt time.Time `json:"finishedAt"`
+	}
+	examRows := []examExport{}
+	initializers.DB.Raw(`SELECT tag, questions, correct, seconds, finished_at FROM exam_results WHERE user_id = ? ORDER BY finished_at`, user.ID).Scan(&examRows)
+
 	// The keys themselves are never kept, so the export lists what is: their names, when they were made and last used.
 	keyRecords, _ := auth.APIKeysOf(user.ID)
 	keys := apiKeysJSON(keyRecords)
@@ -122,6 +151,9 @@ func ExportAccount(c *gin.Context) {
 		"studyProgress":    gin.H{"cards": cardRows, "days": reviewDays},
 		"emailPreferences": emailPrefs,
 		"watchedPages":     watchRows,
+		"readingList":      readingRows,
+		"highlights":       highlightRows,
+		"examResults":      examRows,
 	})
 }
 

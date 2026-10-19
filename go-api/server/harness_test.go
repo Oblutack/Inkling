@@ -100,6 +100,8 @@ type fakeAI struct {
 	fail       atomic.Bool
 	// lastAsk is the most recent /ask request body, to see which passages were sent.
 	lastAsk atomic.Value
+	// lastChat is the most recent /chat request body (to see that the reader's notes were sent).
+	lastChat atomic.Value
 	// lastCompare is the most recent /compare request body; compareReply, when set, is what /compare answers instead
 	// of a normal comparison (to see how the gateway treats a strange reply).
 	lastCompare  atomic.Value
@@ -135,7 +137,18 @@ type fakeAI struct {
 	// checklistCalls counts /checklist calls, checklistReply (when set) replaces its answer, lastChecklist is the latest request.
 	checklistCalls atomic.Int32
 	// voiceCalls counts /transcribe-voice calls.
-	voiceCalls     atomic.Int32
+	voiceCalls atomic.Int32
+	// glossaryCalls counts /glossary calls, glossaryReply (when set) replaces its answer, lastGlossary is the latest request.
+	glossaryCalls atomic.Int32
+	// bilingualCalls counts /bilingual calls, bilingualReply (when set) replaces its answer, lastBilingual is the latest request.
+	bilingualCalls atomic.Int32
+	// explainCalls counts /explain calls and lastExplain is the latest request.
+	explainCalls   atomic.Int32
+	lastExplain    atomic.Value
+	bilingualReply atomic.Value
+	lastBilingual  atomic.Value
+	glossaryReply  atomic.Value
+	lastGlossary   atomic.Value
 	checklistReply atomic.Value
 	lastChecklist  atomic.Value
 	datesReply     atomic.Value
@@ -259,6 +272,8 @@ func (f *fakeAI) handler(w http.ResponseWriter, r *http.Request) {
 	}
 	switch r.URL.Path {
 	case "/chat":
+		chatRaw, _ := io.ReadAll(r.Body)
+		f.lastChat.Store(chatRaw)
 		_, _ = w.Write([]byte(`{"answer":"fake answer [1]","sources":[{"id":1,"text":"the cited passage","page":2,"pageEnd":3,"document":"report.pdf"}]}`))
 	case "/podcast":
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -331,6 +346,33 @@ func (f *fakeAI) handler(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"name": "doc", "fields": results, "suspicious": false})
+	case "/explain":
+		f.explainCalls.Add(1)
+		raw, _ := io.ReadAll(r.Body)
+		f.lastExplain.Store(raw)
+		_, _ = w.Write([]byte(`{"explanation":"  It means money held by a third party.  "}`))
+	case "/bilingual":
+		f.bilingualCalls.Add(1)
+		raw, _ := io.ReadAll(r.Body)
+		f.lastBilingual.Store(raw)
+		if override, _ := f.bilingualReply.Load().(string); override != "" {
+			_, _ = w.Write([]byte(override))
+			return
+		}
+		_, _ = w.Write([]byte(`{"rows":[` +
+			`{"kind":"heading","source":"Rent","target":"Miete","figuresKept":true},` +
+			`{"kind":"bullet","source":"Notice is 60 days.","target":"Die Frist beträgt 30 Tage.","figuresKept":false},` +
+			`{"kind":"paragraph","source":"Pets are not allowed.","target":"","figuresKept":true}],` +
+			`"vocabulary":[{"word":"notice","translation":"Kündigung"}],"missing":1}`))
+	case "/glossary":
+		f.glossaryCalls.Add(1)
+		raw, _ := io.ReadAll(r.Body)
+		f.lastGlossary.Store(raw)
+		if override, _ := f.glossaryReply.Load().(string); override != "" {
+			_, _ = w.Write([]byte(override))
+			return
+		}
+		_, _ = w.Write([]byte(`{"terms":[{"term":"escrow","explanation":"Money held by a third party.","pages":[1,2]},{"term":"arrears","explanation":"Overdue payments.","pages":[]}],"suspicious":false}`))
 	case "/transcribe-voice":
 		f.voiceCalls.Add(1)
 		_, _ = w.Write([]byte(`{"text":"  What does the   lease say about the deposit? ","language":"en"}`))

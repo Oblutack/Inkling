@@ -92,7 +92,7 @@ func RewriteDocument(c *gin.Context) {
 	// Everything made from the old summary goes with it, except the study material of a document that had no summary:
 	// that was made from the text itself, so it is still right.
 	err = initializers.DB.Exec(
-		"UPDATE documents SET summary = ?, podcast = NULL, suggestions = NULL, study = CASE WHEN summary = '' THEN study ELSE NULL END, updated_at = now() WHERE id = ?",
+		"UPDATE documents SET summary = ?, podcast = NULL, suggestions = NULL, bilingual = NULL, study = CASE WHEN summary = '' THEN study ELSE NULL END, updated_at = now() WHERE id = ?",
 		result.Summary, document.ID,
 	).Error
 	if err != nil {
