@@ -13,8 +13,6 @@ import re
 from dataclasses import dataclass
 from typing import Any, Optional
 
-from attribution import numbers
-
 MAX_BLOCKS = 80
 MAX_BLOCK_CHARS = 1_200
 MAX_VOCABULARY = 12
@@ -104,8 +102,27 @@ def parse_bilingual(reply: str, count: int) -> Optional[tuple[dict[int, str], li
     return (lines, vocabulary) if lines else None
 
 
+# A figure written in digits, with the separators languages use inside numbers: 1,250 / 1.250 / 1 250 / 1'250 / 2,5.
+_FIGURE = re.compile(r"\d+(?:[.,'\u00a0\u202f\u2009 ]\d+)*")
+_GROUP = re.compile(r"[.,'\u00a0\u202f\u2009 ](?=\d{3}(?!\d))")
+
+
+def _figures(text: str) -> set[str]:
+    """The figures of a line written in digits, the same however a language writes them: a separator followed by
+    exactly three digits groups thousands (1,250 = 1.250 = 1 250), any other is the decimal point (2,5 = 2.5). Numbers
+    written as words are left out: "twelve" rightly becomes "zwölf" in a translation."""
+    found = set()
+    for match in _FIGURE.finditer(text):
+        for part in re.split(
+            r" (?!\d{3}(?!\d))", match.group(0)
+        ):  # a space not grouping thousands separates two figures
+            canonical = _GROUP.sub("", part).replace(",", ".")
+            found.add(canonical.rstrip("."))
+    return found
+
+
 def _numbers_match(source: str, target: str) -> bool:
-    return set(numbers(source)) <= set(numbers(target))
+    return _figures(source) <= _figures(target)
 
 
 def assemble(blocks: list[Block], translated: dict[int, str], vocabulary: list[tuple[str, str]]) -> dict[str, Any]:

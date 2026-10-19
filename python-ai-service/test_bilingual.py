@@ -74,6 +74,21 @@ def test_rows_pair_each_line_with_its_translation_and_check_the_figures():
     assert rows[1]["kind"] == "bullet" and rows[1]["source"] == "Notice is 60 days."
 
 
+def test_figures_written_the_way_another_language_writes_them_are_kept():
+    pairs = [
+        ("£1,250 per month", "£1.250 pro Monat"),
+        ("£1,250 per month", "1 250 £ par mois"),
+        ("A fee of £45 after five days.", "Eine Gebühr von £45 nach fünf Tagen."),
+        ("Lasts twelve months, ends 31 October 2027.", "Dauert zwölf Monate, endet 31. Oktober 2027."),
+        ("Rent rises by 8%, or 2.5 points.", "Die Miete steigt um 8 %, also 2,5 Punkte."),
+        ("60-day notice", "60-Tage-Frist"),
+    ]
+    for source, target in pairs:
+        assert assemble([Block("paragraph", source)], {1: target}, [])["rows"][0]["figuresKept"] is True, target
+    for source, target in [("£1,250 a month", "£1.205 im Monat"), ("Pay 2.5%", "Zahle 25 %"), ("14 days", "41 Tage")]:
+        assert assemble([Block("paragraph", source)], {1: target}, [])["rows"][0]["figuresKept"] is False, target
+
+
 def test_number_words_and_thousand_separators_are_not_taken_for_changes():
     blocks = [Block("paragraph", "The deposit is 1,900 euros and lasts seven years.")]
     ok = assemble(blocks, {1: "Die Kaution beträgt 1900 Euro und gilt 7 Jahre."}, [])
