@@ -5,11 +5,12 @@ your data, in plain words.
 
 ## What is sent, and when
 
-Only when you press **Summarize this page**, **Summarize the selection** or **Save for later**, the extension sends this to the Inkling address
+Only when you press **Summarize this page**, **Summarize the selection**, **Explain the selection** or **Save for later**, the extension sends this to the Inkling address
 you typed in its settings:
 
 - the text of the page (or of your selection), with the page's title in front of it; or, for a page that has no text of its own
   (such as a PDF in the browser's viewer), the page's address, so the server can read it;
+- when you press **Explain the selection** instead: the selected words (at most 2000 characters), your language choice and whether you asked for it more simply; nothing is kept;
 - when you press **Save for later** instead: the page's address (or, for a page that is not a web page, its text), so that your
   server can read it and keep a short summary on your reading list;
 - your summary choices (length, style, language, and whether to keep the result in your library);

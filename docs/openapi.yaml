@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Inkling API
-  version: "1.1.0"
+  version: "1.2.0"
   summary: Summarize text, web pages, documents, photos and recordings from your own programs.
   description: |
     The API for programs. Create a key on the **Account** page, then send it with every request:
@@ -10,7 +10,7 @@ info:
     Authorization: Bearer ink_...
     ```
 
-    **What a key can do.** Summarize, add a page or text to your reading list, and read today's usage. Nothing else: it
+    **What a key can do.** Summarize, explain a few selected words, add a page or text to your reading list, and read today's usage. Nothing else: it
     cannot read or change your saved summaries, your reading list, your account or your other keys, so a leaked key can
     be revoked without harm to anything else. Nothing a key summarizes is saved to your library or kept, except what it
     adds to the reading list (a short summary of the page, kept in your library with it) and what `save=true` asks for.
@@ -122,6 +122,62 @@ paths:
           $ref: "#/components/responses/InvalidKey"
         "422":
           $ref: "#/components/responses/Unreadable"
+        "429":
+          $ref: "#/components/responses/OverLimit"
+        "502":
+          $ref: "#/components/responses/AiFailed"
+        "503":
+          $ref: "#/components/responses/Paused"
+  /v1/explain:
+    post:
+      tags: [Summaries]
+      operationId: explain
+      summary: Explain a few selected words in plain words
+      description: |
+        What the browser extension's "Explain this" asks for: a few selected words or sentences (up to 2000 characters)
+        explained in two to four short sentences, or, with `simpler`, in everyday words. Nothing is saved. It counts as one
+        chat question of the key owner's daily allowance (not a summary), and is refunded if it fails. The explanation is the
+        AI's, and can be wrong.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  maxLength: 2000
+                simpler:
+                  type: boolean
+                  default: false
+                language:
+                  $ref: "#/components/schemas/Language"
+            example:
+              text: The deposit is held in escrow until the lease ends.
+      responses:
+        "200":
+          description: The explanation.
+          headers:
+            X-Quota-Limit:
+              $ref: "#/components/headers/QuotaLimit"
+            X-Quota-Remaining:
+              $ref: "#/components/headers/QuotaRemaining"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [explanation]
+                properties:
+                  explanation:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/InvalidKey"
+        "413":
+          $ref: "#/components/responses/TooLarge"
         "429":
           $ref: "#/components/responses/OverLimit"
         "502":

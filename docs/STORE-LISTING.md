@@ -20,6 +20,7 @@ Inkling for the browser turns any web page, or any text you select, into a short
 - **Your choices.** Length (about 100 to 500 words), style (standard, bullet points, brief, simple language, key takeaways) and
   language (15 languages). They are remembered.
 - **Keep or copy.** Copy the summary, or keep it in your Inkling library.
+- **Explain this.** Select some words, press Explain (or right-click), and get a short plain-language explanation, or a simpler one.
 - **Save for later.** Put the page on your Inkling reading list with a short summary, and read it when you have time.
 - **Private by design.** Nothing is read until you press the button, nothing is sent to anyone but your own Inkling server, and
   there is no analytics, advertising or tracking. The extension can reach only the one server address you give it.
@@ -39,7 +40,7 @@ Summarize the web page or selected text the person is looking at, using their ow
 | --- | --- |
 | `activeTab` | Reads the text of the page the person pressed the button on, only at that moment. No page is read in the background and no other tab is touched. |
 | `scripting` | Runs one small function in that page, once, to collect its text and the selected text. There is no content script on every page. |
-| `contextMenus` | Adds the right-click entry "Summarize the selection with Inkling" for selected text. |
+| `contextMenus` | Adds the right-click entries "Summarize the selection with Inkling" and "Explain the selection with Inkling" for selected text. |
 | `storage` | Keeps the person's settings (server address, API key, summary choices) in this browser only. They are not synced. |
 | Optional host permission for one address | When the person saves the settings, the browser asks to let the extension talk to the one Inkling server address they typed, and nothing else. It is how the page text and the API key reach their own server. |
 
