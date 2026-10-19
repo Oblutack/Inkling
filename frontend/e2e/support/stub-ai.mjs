@@ -12,6 +12,7 @@
 //   POST /embed                          JSON {texts, kind}: word-bucket vectors, synonyms share a bucket
 //   POST /read | /read-url               multipart file(s) | JSON {url}: the text of a document, with no summary made
 //   POST /study                          JSON {summary, text, kind}: three flashcards, or a three-question quiz
+//   POST /glossary                       JSON {name, text}: "escrow", "arrears" and "lessor" when the text uses them
 //   POST /transcribe-voice               multipart file: a spoken question, always "What is the notice period?"
 //   POST /checklist                      JSON {name, text, kind}: four items (found, found but unclear, two not found) and the clause quoted from the text, if any
 //   POST /dates                          JSON {name, text, language}: a "D Month YYYY" is a date, "within N days" and
@@ -172,6 +173,51 @@ const server = http.createServer(async (req, res) => {
       }),
       suspicious: String(name).toLowerCase().includes("suspicious"),
     });
+  }
+
+  if (url.pathname === "/explain") {
+    // "Explain this": the stub explains the first eight words ("simpler" gives a different sentence); a text with FAIL_ME fails.
+    const { text = "", simpler = false } = JSON.parse(body.toString("utf8") || "{}");
+    if (String(text).includes("FAIL_ME")) return json(res, 502, { detail: "The language model failed to explain." });
+    const start = words(String(text)).slice(0, 8).join(" ");
+    return json(res, 200, { explanation: (simpler ? "Stub simple explanation of: " : "Stub explanation of: ") + start });
+  }
+
+  if (url.pathname === "/bilingual") {
+    // A "translation": each line of the summary with "[lang] " in front, except a line with "SKIP" (not translated) and a line
+    // with "FIGURES" whose numbers are changed.
+    const { summary = "", name = "", language = "" } = JSON.parse(body.toString("utf8") || "{}");
+    if (String(name).toLowerCase().includes("boom")) return json(res, 502, { detail: "The language model failed to translate the summary." });
+    const rows = [];
+    for (const raw of String(summary).split("\n")) {
+      const line = raw.trim();
+      if (!line) continue;
+      const m = /^(#{1,6}\s+|[-*+]\s+|\d{1,3}[.)]\s+)?(.*)$/.exec(line);
+      const source = m[2].replace(/[*_`]/g, "");
+      const kind = !m[1] ? "paragraph" : m[1].startsWith("#") ? "heading" : /^\d/.test(m[1]) ? "numbered" : "bullet";
+      const target = source.includes("SKIP") ? "" : "[" + language + "] " + (source.includes("FIGURES") ? source.replace(/\d+/g, (d) => String(Number(d) + 1)) : source);
+      rows.push({ kind, source, target, figuresKept: !target || !source.includes("FIGURES") });
+    }
+    return json(res, 200, {
+      rows,
+      vocabulary: [{ word: "Subject", translation: "[" + language + "] Subject" }],
+      missing: rows.filter((r) => !r.target).length,
+    });
+  }
+
+  if (url.pathname === "/glossary") {
+    // The terms are "escrow", "arrears" and "lessor", when the text uses them (the real service keeps only terms that occur).
+    const { text = "", name = "" } = JSON.parse(body.toString("utf8") || "{}");
+    if (String(name).toLowerCase().includes("boom")) return json(res, 502, { detail: "The language model failed to find the terms." });
+    const pages = String(text).split("");
+    const terms = ["escrow", "arrears", "lessor"]
+      .filter((term) => new RegExp(String.raw`\b${term}\b`, "i").test(text))
+      .map((term) => ({
+        term,
+        explanation: "Stub explanation of " + term + ".",
+        pages: pages.length > 1 ? pages.flatMap((page, i) => (new RegExp(String.raw`\b${term}\b`, "i").test(page) ? [i + 1] : [])) : [],
+      }));
+    return json(res, 200, { terms, suspicious: /ignore all previous instructions/i.test(String(text)) });
   }
 
   if (url.pathname === "/transcribe-voice") {

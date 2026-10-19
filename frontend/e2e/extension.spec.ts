@@ -18,7 +18,7 @@ declare const chrome: {
 };
 
 // What the extension's background code offers the tests (a native right-click menu cannot be clicked from a test).
-type Background = { inklingBackground: { openForSelection(tab: { id: number }): Promise<unknown> } };
+type Background = { inklingBackground: { openForSelection(tab: { id: number }): Promise<unknown>; openForExplain(tab: { id: number }): Promise<unknown> } };
 
 const ORIGIN = "http://localhost:13000"; // the website, which is where a person makes the key
 const ARTICLE_HOST = "http://localhost:9911";
@@ -425,6 +425,55 @@ test.describe("the browser extension", () => {
     await expect(popup.locator("#summary")).toContainText(`Words in source: ${words(selected).length}`);
     await expect(popup.locator("#summary")).toContainText(`Opening words: ${words(selected).slice(0, 8).join(" ")}`);
     await expect(popup.getByRole("button", { name: "Copy", exact: true })).toBeVisible();
+    await popup.close();
+    await article.close();
+  });
+
+  test("selected words can be explained from the popup, more simply, and copied", async () => {
+    const { popup, article } = await popupFor("/article");
+    // with nothing selected there is nothing to explain
+    await expect(popup.getByRole("button", { name: "Explain the selection" })).toBeHidden();
+    await article.evaluate(() => {
+      const range = document.createRange();
+      range.selectNodeContents(document.querySelectorAll("article p")[1]);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+    await popup.reload();
+    await popup.getByRole("button", { name: "Explain the selection" }).click();
+    const start = words(ARTICLE.paragraphs[1]).slice(0, 8).join(" ");
+    await expect(popup.locator("#explanation")).toHaveText(`Stub explanation of: ${start}`);
+    await expect(popup.locator("#explain-note")).toContainText("This is the AI's explanation");
+    await expect(popup.locator("#explanation")).toBeFocused();
+
+    await popup.getByRole("button", { name: "Explain more simply" }).click();
+    await expect(popup.locator("#explanation")).toHaveText(`Stub simple explanation of: ${start}`);
+    await expect(popup.getByRole("button", { name: "Explain more simply" })).toBeHidden();
+    await popup.getByRole("button", { name: "Back" }).click();
+    await expect(popup.getByRole("button", { name: "Explain the selection" })).toBeVisible();
+    await popup.close();
+    await article.close();
+  });
+
+  test("the second right-click entry opens a window that explains the selection at once", async () => {
+    const article = await context.newPage();
+    await article.goto(`${ARTICLE_HOST}/article`);
+    await article.evaluate(() => {
+      const range = document.createRange();
+      range.selectNodeContents(document.querySelectorAll("article p")[0]);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+    const tabId = await tabIdOf(`${ARTICLE_HOST}/*`);
+    const worker = await backgroundWorker();
+    const [popup] = await Promise.all([
+      context.waitForEvent("page"),
+      worker.evaluate((id) => (globalThis as unknown as Background).inklingBackground.openForExplain({ id }), tabId),
+    ]);
+    expect(popup.url()).toContain(`popup.html?tab=${tabId}&explain=1`);
+    await expect(popup.locator("#explanation")).toContainText(`Stub explanation of: ${words(ARTICLE.paragraphs[0]).slice(0, 8).join(" ")}`);
     await popup.close();
     await article.close();
   });
