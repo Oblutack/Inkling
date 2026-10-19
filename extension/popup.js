@@ -1,4 +1,4 @@
-import { InklingError, saveForLater, summarizeText, summarizeUrl } from "./lib/api.js";
+import { InklingError, MAX_EXPLAIN_CHARS, explainText, saveForLater, summarizeText, summarizeUrl } from "./lib/api.js";
 import { errorText, t, translatePage } from "./lib/i18n.js";
 import { renderMarkdown } from "./lib/markdown.js";
 import { readPage } from "./lib/page.js";
@@ -9,7 +9,7 @@ import { LENGTHS, STYLES, hostOf, isConfigured, loadSettings, normalizeBaseUrl, 
 const TOO_LITTLE_TEXT = 200;
 
 const $ = (id) => document.getElementById(id);
-const sections = ["setup", "access", "ready", "working", "result"];
+const sections = ["setup", "access", "ready", "working", "result", "explain"];
 
 let settings;
 let tab = null; // { id, title, url } of the page being read
@@ -18,6 +18,9 @@ let markdown = "";
 let controller = null;
 // Opened from the right-click entry (background.js): the selection is summarized as soon as it has been read, once.
 let startWithSelection = new URLSearchParams(location.search).get("selection") === "1";
+// Opened from the other right-click entry: the selection is explained as soon as it has been read, once.
+let startWithExplain = new URLSearchParams(location.search).get("explain") === "1";
+let explanation = "";
 
 function show(name) {
   for (const id of sections) $(id).hidden = id !== name;
@@ -77,6 +80,7 @@ async function showReady() {
     $("summarize-page").disabled = true;
     $("save-later").disabled = true;
     $("summarize-selection").hidden = true;
+    $("explain-selection").hidden = true;
     showError(t("cannotRead"));
     return;
   }
@@ -89,8 +93,15 @@ async function showReady() {
   $("selection-info").hidden = selected === 0;
   $("selection-info").textContent = selected ? t("selectionInfo", selected) : "";
   $("summarize-selection").hidden = selected === 0;
+  $("explain-selection").hidden = selected === 0;
   $("summarize-page").classList.toggle("secondary", selected > 0); // with a selection offered, the page is the quieter choice
   show("ready");
+  if (selected && startWithExplain) {
+    startWithExplain = false;
+    await runExplain(false);
+    return;
+  }
+  startWithExplain = false;
   if (selected && startWithSelection) {
     startWithSelection = false;
     await run(true);
@@ -203,6 +214,39 @@ async function saveLater() {
   }
 }
 
+// Explains the selected words in plain words (more simply when asked). The page's selection is what is sent: a few sentences.
+async function runExplain(simpler) {
+  showError("");
+  controller = new AbortController();
+  show("working");
+  $("working-text").textContent = t("explaining");
+  try {
+    const result = await explainText({
+      baseUrl: normalizeBaseUrl(settings.baseUrl).url,
+      apiKey: settings.apiKey.trim(),
+      language: settings.language,
+      text: page.selection,
+      simpler,
+      signal: controller.signal,
+    });
+    explanation = result.explanation;
+    $("explanation").textContent = result.explanation;
+    $("explain-note").textContent = [result.clipped ? t("explainClipped", MAX_EXPLAIN_CHARS) : "", t("explainNote")].filter(Boolean).join(" ");
+    $("simpler").hidden = simpler;
+    show("explain");
+    $("explanation").focus();
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      await showReady();
+      return;
+    }
+    show("ready");
+    showError(error instanceof InklingError ? errorText(error, hostOf(settings.baseUrl)) : t("errUnknown", "?"));
+  } finally {
+    controller = null;
+  }
+}
+
 async function init() {
   translatePage();
   settings = await loadSettings();
@@ -232,6 +276,18 @@ async function init() {
   });
   $("summarize-page").addEventListener("click", () => run(false));
   $("summarize-selection").addEventListener("click", () => run(true));
+  $("explain-selection").addEventListener("click", () => runExplain(false));
+  $("simpler").addEventListener("click", () => runExplain(true));
+  $("explain-back").addEventListener("click", () => showReady());
+  $("copy-explanation").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(explanation);
+      $("copy-explanation").textContent = t("copied");
+      setTimeout(() => ($("copy-explanation").textContent = t("copy")), 1500);
+    } catch {
+      // the clipboard is not available: the text is still there to select
+    }
+  });
   $("save-later").addEventListener("click", () => void saveLater());
   $("cancel").addEventListener("click", () => controller?.abort());
   $("stop").addEventListener("click", () => controller?.abort());

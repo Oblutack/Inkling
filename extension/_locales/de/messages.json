@@ -283,5 +283,34 @@
   },
   "errListFull": {
     "message": "Deine Leseliste ist voll. Entferne oder archiviere zuerst Einträge auf der Inkling-Website."
+  },
+  "menuExplainSelection": {
+    "message": "Auswahl mit Inkling erklären"
+  },
+  "explainSelection": {
+    "message": "Auswahl erklären"
+  },
+  "explaining": {
+    "message": "Wird erklärt..."
+  },
+  "explanationLabel": {
+    "message": "Erklärung"
+  },
+  "explainSimpler": {
+    "message": "Einfacher erklären"
+  },
+  "explainBack": {
+    "message": "Zurück"
+  },
+  "explainNote": {
+    "message": "Das ist die Erklärung der KI. Sie kann falsch sein, prüfe also alles, was wichtig ist."
+  },
+  "explainClipped": {
+    "message": "Nur die ersten $COUNT$ Zeichen wurden erklärt.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   }
 }

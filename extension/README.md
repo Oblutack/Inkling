@@ -12,6 +12,7 @@ It has **no build step and no dependencies**: the code in this folder is what th
   the server by its address instead.
 - **Summarize the selection.** Select some text first and the button changes to summarize just that. Or right-click the selection and choose **Summarize the selection with Inkling**: a small window opens and goes straight to the summary.
 - **Save for later.** Press **Save for later** to put the page on your Inkling reading list: your server reads it (the page's address is sent, not its text), keeps a short summary of it in your library, and it waits for you on the website, where you can mark it read or archive it. A page that is on the list already is not summarized again. It counts as one summary of your daily allowance.
+- **Explain the selection.** Select a few words or sentences and press **Explain the selection** (or right-click and choose **Explain the selection with Inkling**): you get two to four short sentences in plain words, and **Explain more simply** gives a version in everyday words. The explanation is the AI's and can be wrong, which the window says. It counts as one chat question of your daily allowance and nothing is saved.
 - **Watch it being written.** The summary appears as it is written (the API's streaming), with a **Stop** button that keeps what was written so far. A server that answers all at once works as well.
 - **Your choices.** Length (about 100 to 500 words), style (standard, bullet points, brief, simple language, key takeaways),
   language (the 15 that Inkling writes in), and whether to keep the result in your library. They are remembered.
@@ -68,7 +69,7 @@ See [`docs/PRIVACY-EXTENSION.md`](../docs/PRIVACY-EXTENSION.md).
 ## How it talks to the server
 
 It uses the API for programs (`docs/openapi.yaml`): `POST /v1/summarize-text` (or `/v1/summarize-url` for a page without text),
-with `?save=true` when you ask to keep the result, `POST /v1/reading-list` for *Save for later*, and `GET /v1/usage` for the connection test. The server lets a request from a
+with `?save=true` when you ask to keep the result, `POST /v1/reading-list` for *Save for later*, `POST /v1/explain` for *Explain the selection*, and `GET /v1/usage` for the connection test. The server lets a request from a
 browser extension through (and only for these `/v1` routes, and only with a key): see `ExtensionMayCallKeyRoutes` in
 `go-api/middleware/security.go`. Pages of other websites are still refused, because a key does not belong in a web page.
 

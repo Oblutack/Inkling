@@ -283,5 +283,34 @@
   },
   "errListFull": {
     "message": "Vaša lista za čitanje je puna. Prvo uklonite ili arhivirajte stavke na web stranici Inkling."
+  },
+  "menuExplainSelection": {
+    "message": "Objasni odabrano pomoću Inklinga"
+  },
+  "explainSelection": {
+    "message": "Objasni odabrano"
+  },
+  "explaining": {
+    "message": "Objašnjavam..."
+  },
+  "explanationLabel": {
+    "message": "Objašnjenje"
+  },
+  "explainSimpler": {
+    "message": "Objasni jednostavnije"
+  },
+  "explainBack": {
+    "message": "Nazad"
+  },
+  "explainNote": {
+    "message": "Ovo je objašnjenje AI-ja. Može biti pogrešno, pa provjerite sve što je važno."
+  },
+  "explainClipped": {
+    "message": "Objašnjeno je samo prvih $COUNT$ znakova.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   }
 }

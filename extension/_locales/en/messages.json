@@ -283,5 +283,34 @@
   },
   "errListFull": {
     "message": "Your reading list is full. Remove or archive some items on the Inkling website first."
+  },
+  "menuExplainSelection": {
+    "message": "Explain the selection with Inkling"
+  },
+  "explainSelection": {
+    "message": "Explain the selection"
+  },
+  "explaining": {
+    "message": "Explaining..."
+  },
+  "explanationLabel": {
+    "message": "Explanation"
+  },
+  "explainSimpler": {
+    "message": "Explain more simply"
+  },
+  "explainBack": {
+    "message": "Back"
+  },
+  "explainNote": {
+    "message": "This is the AI's explanation. It can be wrong, so check anything that matters."
+  },
+  "explainClipped": {
+    "message": "Only the first $COUNT$ characters were explained.",
+    "placeholders": {
+      "count": {
+        "content": "$1"
+      }
+    }
   }
 }

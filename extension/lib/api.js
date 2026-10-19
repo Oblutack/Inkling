@@ -170,6 +170,24 @@ export async function saveForLater({ baseUrl, apiKey, url, text, language, signa
   };
 }
 
+// The most text "explain this" takes: a few sentences that were selected (keep in step with the API: /v1/explain).
+export const MAX_EXPLAIN_CHARS = 2000;
+
+// Explains some selected words or sentences in plain words ("simpler" asks for everyday words). Nothing is saved.
+export async function explainText({ baseUrl, apiKey, text, simpler = false, language, signal, fetchImpl }) {
+  const clipped = text.length > MAX_EXPLAIN_CHARS ? text.slice(0, MAX_EXPLAIN_CHARS) : text;
+  const { json, response } = await request({
+    baseUrl,
+    apiKey,
+    signal,
+    fetchImpl,
+    path: "/v1/explain",
+    body: { text: clipped, simpler, ...(language ? { language } : {}) },
+  });
+  if (!json || typeof json.explanation !== "string" || !json.explanation.trim()) throw new InklingError("ai_failed", { status: response.status });
+  return { explanation: json.explanation, clipped: text.length > MAX_EXPLAIN_CHARS, quotaRemaining: number(response.headers, "X-Quota-Remaining") };
+}
+
 // What the key is and what it has done today (does not count as a request).
 export async function keyUsage({ baseUrl, apiKey, signal, fetchImpl }) {
   const { json } = await request({ baseUrl, apiKey, signal, fetchImpl, path: "/v1/usage" });

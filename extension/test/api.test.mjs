@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { InklingError, MAX_TEXT_CHARS, errorFromResponse, keyUsage, saveForLater, summarizeText, summarizeUrl } from "../lib/api.js";
+import { InklingError, MAX_EXPLAIN_CHARS, MAX_TEXT_CHARS, errorFromResponse, explainText, keyUsage, saveForLater, summarizeText, summarizeUrl } from "../lib/api.js";
 import { errorText } from "../lib/i18n.js";
 
 const KEY = "ink_" + "k".repeat(40);
@@ -164,4 +164,33 @@ test("saving fails with the code of the reason", async () => {
   await assert.rejects(saveForLater({ ...base, url: "https://x.example", fetchImpl: fakeFetch(409, { error: "full" }) }), (error) => error.code === "list_full");
   await assert.rejects(saveForLater({ ...base, url: "https://x.example", fetchImpl: fakeFetch(422, { error: "unreadable" }) }), (error) => error.code === "bad_request");
   await assert.rejects(saveForLater({ ...base, url: "https://x.example", fetchImpl: fakeFetch(201, {}) }), (error) => error.code === "ai_failed");
+});
+
+test("selected words are explained, plainly or more simply, and nothing is streamed or saved", async () => {
+  const fetchImpl = fakeFetch(200, { explanation: "It means money held by a third party." }, { "X-Quota-Remaining": "9" });
+  const result = await explainText({ ...base, text: "The deposit sits in escrow.", language: "German", fetchImpl });
+  const { url, init } = fetchImpl.calls[0];
+  assert.equal(url.pathname, "/v1/explain");
+  assert.equal(url.searchParams.has("stream"), false);
+  assert.equal(init.method, "POST");
+  assert.equal(init.headers.Authorization, `Bearer ${KEY}`);
+  assert.equal(init.credentials, "omit");
+  assert.deepEqual(JSON.parse(init.body), { text: "The deposit sits in escrow.", simpler: false, language: "German" });
+  assert.deepEqual(result, { explanation: "It means money held by a third party.", clipped: false, quotaRemaining: 9 });
+
+  const again = fakeFetch(200, { explanation: "Simple." });
+  await explainText({ ...base, text: "Escrow.", simpler: true, fetchImpl: again });
+  assert.deepEqual(JSON.parse(again.calls[0].init.body), { text: "Escrow.", simpler: true });
+});
+
+test("a selection that is too long is cut, and the person is told", async () => {
+  const fetchImpl = fakeFetch(200, { explanation: "x" });
+  const result = await explainText({ ...base, text: "a".repeat(MAX_EXPLAIN_CHARS + 50), fetchImpl });
+  assert.equal(JSON.parse(fetchImpl.calls[0].init.body).text.length, MAX_EXPLAIN_CHARS);
+  assert.equal(result.clipped, true);
+});
+
+test("an explanation that is empty, and a refusal, are failures with a code", async () => {
+  await assert.rejects(explainText({ ...base, text: "t", fetchImpl: fakeFetch(200, { explanation: "  " }) }), (error) => error.code === "ai_failed");
+  await assert.rejects(explainText({ ...base, text: "t", fetchImpl: fakeFetch(429, { code: "quota_exceeded" }) }), (error) => error.code === "quota");
 });

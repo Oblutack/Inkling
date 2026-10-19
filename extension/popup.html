@@ -45,6 +45,7 @@
         <label class="check"><input type="checkbox" id="keep" /> <span data-i18n="keepLabel"></span></label>
         <div class="actions">
           <button type="button" id="summarize-selection" hidden data-i18n="summarizeSelection"></button>
+          <button type="button" id="explain-selection" class="secondary" hidden data-i18n="explainSelection"></button>
           <button type="button" id="summarize-page" data-i18n="summarizePage"></button>
         </div>
         <div class="actions">
@@ -69,6 +70,17 @@
         <div class="actions" id="done-actions">
           <button type="button" id="copy" data-i18n="copy"></button>
           <button type="button" id="again" class="secondary" data-i18n="again"></button>
+        </div>
+      </section>
+
+      <section id="explain" class="stack" hidden>
+        <h2 id="explain-heading" data-i18n="explanationLabel"></h2>
+        <p id="explanation" class="summary" tabindex="-1" aria-labelledby="explain-heading"></p>
+        <p id="explain-note" class="muted" role="status"></p>
+        <div class="actions">
+          <button type="button" id="simpler" data-i18n="explainSimpler"></button>
+          <button type="button" id="copy-explanation" class="secondary" data-i18n="copy"></button>
+          <button type="button" id="explain-back" class="secondary" data-i18n="explainBack"></button>
         </div>
       </section>
 
