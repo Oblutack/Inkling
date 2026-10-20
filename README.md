@@ -427,7 +427,7 @@ The dashboard covers overview, traffic, latency, the language model (including t
 
 ## Testing
 
-The project has **2,000+ automated tests** across the stack (about 570 Go tests, 890 for the AI service, 340 frontend unit tests, 50 for the browser extension and about 350 browser tests), and every one runs in CI on each push and pull request, together with linting, type checking and vulnerability scanning.
+The project has **2,000+ automated tests** across the stack (about 570 Go tests, 890 for the AI service, 340 frontend unit tests, 50 for the browser extension and about 360 browser tests, 16 of them on phone-sized screens), and every one runs in CI on each push and pull request, together with linting, type checking and vulnerability scanning.
 
 | Layer | What runs | Where |
 | --- | --- | --- |
@@ -435,7 +435,7 @@ The project has **2,000+ automated tests** across the stack (about 570 Go tests,
 | AI service | `pytest` with coverage, `ruff` (lint and format), `mypy`, `pip-audit` | `python-ai-service/` |
 | Frontend | `eslint`, `tsc`, Vitest unit tests with coverage, production build, `pnpm audit` | `frontend/` |
 | Browser extension | Node's test runner (settings, API calls, Markdown drawing, the package: permissions, languages, no inline script); the Firefox build loaded into a real Firefox with Selenium, and checked with `web-ext lint`; the store zips are built | `extension/test/` |
-| End to end | Playwright drives the whole stack in a real browser (sign-up, login, reset, summaries, chat, account, CSP), and the extension loaded into a real Chromium | `frontend/e2e/` |
+| End to end | Playwright drives the whole stack in a real browser (sign-up, login, reset, summaries, chat, account, CSP), and the extension loaded into a real Chromium. `e2e/mobile.spec.ts` also walks the app on a phone: in WebKit (the engine of every iPhone browser) with an iPhone's screen, and in Chromium with an Android phone's, checking that nothing scrolls sideways, that controls are big enough for a finger, that fields do not make an iPhone zoom, and that the PDF viewer fits the screen | `frontend/e2e/` |
 
 `````````bash
 # Go: unit tests (integration tests are skipped without a database)
@@ -456,7 +456,7 @@ pnpm lint && pnpm typecheck && pnpm test
 
 # End to end (starts its own stack on ports 13000, 18080 and 18081; needs Go, Docker for Postgres,
 # and Chrome. Reuses the compose database with a separate "summarizer_e2e" database.)
-pnpm exec playwright install chromium   # once, if you do not have Chrome
+pnpm exec playwright install chromium webkit   # once: Chromium for the desktop and Android tests, WebKit for the iPhone tests
 pnpm test:e2e
 `````````
 
