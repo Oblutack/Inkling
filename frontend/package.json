@@ -14,10 +14,10 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
-    "@fontsource-variable/source-serif-4": "^5.3.0",
-    "@react-oauth/google": "^0.12.2",
+    "@fontsource-variable/source-serif-4": "^5.3.1",
+    "@react-oauth/google": "^0.13.5",
     "axios": "^1.20.0",
-    "docx": "^9.9.0",
+    "docx": "^9.12.0",
     "framer-motion": "^12.23.24",
     "html2pdf.js": "^0.14.0",
     "jspdf": "^4.2.1",
@@ -29,21 +29,21 @@
     "react-dom": "^18"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/eslintrc": "^3.3.7",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.1",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@vitest/coverage-v8": "^5.0.3",
-    "autoprefixer": "^10.4.18",
+    "@vitest/coverage-v8": "^5.0.5",
+    "autoprefixer": "^10.6.1",
     "eslint": "^9.39.5",
     "eslint-config-next": "15.5.27",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.5"
   },
   "pnpm": {
     "overrides": {
