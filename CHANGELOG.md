@@ -170,6 +170,8 @@ new features, changes and fixes. Tests, documentation, CI and dependency updates
 
 ### Fixed
 
+- **web:** Compact menu until the screen is wide enough for the full bar
+- **web:** Finger-sized controls, 16 px fields and calmer animations on phones
 - **ai:** A short label with its value is checked as a statement, not taken for a heading
 - **web:** A note named after its file drops the file's extension
 - **ai:** Translated figures match however the language writes them
