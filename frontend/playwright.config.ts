@@ -26,6 +26,21 @@ export default defineConfig({
     permissions: ["microphone"],
     launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] },
   },
+  projects: [
+    // Everything runs on a desktop, except the phone tests (e2e/mobile.spec.ts), which run twice: in WebKit (the engine of every
+    // iPhone browser) with an iPhone's screen, and in Chromium with an Android phone's.
+    { name: "desktop", testIgnore: /mobile\.spec\.ts/ },
+    {
+      name: "iphone",
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices["iPhone 15"], channel: undefined, permissions: [], launchOptions: {} },
+    },
+    {
+      name: "pixel",
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices["Pixel 7"], channel: undefined },
+    },
+  ],
   webServer: [
     {
       command: "node e2e/support/stub-ai.mjs",
