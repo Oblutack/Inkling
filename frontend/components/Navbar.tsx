@@ -66,7 +66,7 @@ export default function Navbar() {
           <span className="font-display text-2xl tracking-[0.2em]">Inkling</span>
         </Link>
 
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-1 lg:flex">
           {links}
           <span className="mx-1 h-6 w-px bg-ink/20" aria-hidden="true" />
           <ThemeToggle />
@@ -75,7 +75,7 @@ export default function Navbar() {
 
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-ink/10 md:hidden"
+          className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-ink/10 lg:hidden"
           aria-expanded={open}
           aria-controls="mobile-menu"
           aria-label={open ? t("nav.closeMenu") : t("nav.menu")}
@@ -88,7 +88,7 @@ export default function Navbar() {
       </nav>
 
       {open && (
-        <div id="mobile-menu" className="border-t border-ink/15 px-4 pb-4 pt-2 md:hidden">
+        <div id="mobile-menu" className="border-t border-ink/15 px-4 pb-4 pt-2 lg:hidden">
           <div className="flex flex-col gap-1 [&>*]:py-3">{links}</div>
           <div className="mt-2 flex items-center gap-2 border-t border-ink/15 pt-3">
             <ThemeToggle />
