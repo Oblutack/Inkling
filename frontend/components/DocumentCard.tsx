@@ -231,7 +231,7 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
 
   return (
     <motion.div
-      layout // animate position changes when cards are added or removed
+      layout="position" // animate position changes when cards are added or removed (not size changes: they would squash the content)
       initial={{ opacity: 0, y: 12, scale: 0.99 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.15 } }}
@@ -311,7 +311,7 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
                 setTitleDraft(doc.Filename);
                 setRenaming(true);
               }}
-              className="rounded underline underline-offset-4 hover:text-ink"
+              className="tap-target rounded underline underline-offset-4 hover:text-ink"
               aria-label={t("doc.renameAria", { title: doc.Filename })}
             >
               {t("doc.rename")}

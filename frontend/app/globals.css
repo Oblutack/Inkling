@@ -163,6 +163,70 @@ body::before {
   }
 }
 
+/* A page easing in (app/template.tsx). The reduced-motion rule above shortens it to nothing for people who ask for less motion. */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page-enter {
+  animation: page-enter 0.2s ease-out backwards;
+}
+
+/* On a touch screen (a phone or a tablet): controls big enough for a finger (44 px is what iPhones and Android both ask for), and
+   fields with text of at least 16 px, because an iPhone zooms into the page when a smaller field is tapped. */
+@media (pointer: coarse) {
+  .btn-sm,
+  .btn-quiet {
+    min-height: 44px;
+  }
+  /* !important: the text-size classes on single fields (text-sm) would otherwise win. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 44px;
+  }
+  .chip {
+    min-height: 40px;
+  }
+  /* A line that opens something (the outline of a mind map), and a checkbox or radio with its words. */
+  summary {
+    padding-block: 12px;
+  }
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  /* A small button or link that is only text: roomier to hit, the same to look at. */
+  .tap-target {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .tap-pad {
+    padding-block: 10px;
+  }
+  .tap-square {
+    min-height: 40px;
+    min-width: 40px;
+  }
+  /* A small round button (the x on a tag): it looks the same, but the part that reacts to a finger is 40 px, and the extra room
+     is taken back with a negative margin so nothing moves. */
+  .tap-extend {
+    box-sizing: content-box;
+    padding: 10px;
+    margin: -10px;
+  }
+}
+
 /* The word-count slider. */
 input[type="range"] {
   -webkit-appearance: none;
@@ -211,6 +275,13 @@ input[type="range"]::-moz-range-track {
 input[type="range"]:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* The slider has a thin track: on a touch screen the line a finger can grab is taller than the line that is drawn. */
+@media (pointer: coarse) {
+  input[type="range"] {
+    height: 2.75rem;
+  }
 }
 
 input[type="number"]::-webkit-inner-spin-button,

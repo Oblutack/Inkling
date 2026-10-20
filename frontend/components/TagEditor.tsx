@@ -54,7 +54,7 @@ export default function TagEditor({ documentId, tags, onChange }: TagEditorProps
             type="button"
             onClick={() => save(tags.filter((other) => other !== tag))}
             disabled={saving}
-            className="-mr-1.5 flex h-5 w-5 items-center justify-center rounded-full text-base leading-none text-ink/70 hover:bg-ink/10 hover:text-danger"
+            className="tap-extend -mr-1.5 flex h-5 w-5 items-center justify-center rounded-full text-base leading-none text-ink/70 hover:bg-ink/10 hover:text-danger"
             aria-label={t("tags.remove", { tag })}
           >
             &times;

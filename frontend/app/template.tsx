@@ -1,15 +1,5 @@
-"use client";
-
-import { motion } from 'framer-motion';
-
+// A page eases in when it opens. It is done with CSS, not with JavaScript: a script-driven fade starts the page invisible and shows it
+// only after all the scripts have loaded, which on a phone with a slow connection is a blank screen. The CSS fade starts at once.
 export default function Template({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ y: 8, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ ease: "easeOut", duration: 0.2 }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className="page-enter">{children}</div>;
 }

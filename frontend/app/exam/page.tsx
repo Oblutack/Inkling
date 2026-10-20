@@ -450,7 +450,7 @@ export default function ExamPage() {
                 onClick={() => goTo(i)}
                 aria-label={t("exam.goTo", { n: i + 1 }) + (run.answers[i] === null ? "" : ` (${t("exam.answered")})`)}
                 aria-current={i === run.index ? "step" : undefined}
-                className={`h-8 min-w-8 rounded-md border px-2 text-sm font-medium ${
+                className={`tap-square h-8 min-w-8 rounded-md border px-2 text-sm font-medium ${
                   i === run.index ? "border-ink bg-ink text-canvas" : run.answers[i] !== null ? "border-accent bg-accent/15" : "border-ink/30"
                 }`}
               >

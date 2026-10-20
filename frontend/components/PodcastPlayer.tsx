@@ -165,7 +165,7 @@ export default function PodcastPlayer({ documentId }: PodcastPlayerProps) {
                   type="button"
                   onClick={() => canSpeak && player.play(i)}
                   disabled={!canSpeak}
-                  className="block w-full text-left disabled:cursor-default"
+                  className="tap-pad block w-full text-left disabled:cursor-default"
                   aria-label={canSpeak ? t("podcast.playFrom", { host: HOSTS[turn.speaker], text: turn.text }) : undefined}
                 >
                   <span className="mr-2 text-xs font-semibold uppercase tracking-widest text-ink/70">{HOSTS[turn.speaker]}</span>

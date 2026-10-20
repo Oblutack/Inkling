@@ -194,7 +194,7 @@ export default function LoginPage() {
             required
           />
           <p className="mt-2 text-sm">
-            <Link href="/forgot-password" className="text-accent underline underline-offset-2">
+            <Link href="/forgot-password" className="tap-target text-accent underline underline-offset-2">
               {t("login.forgot")}
             </Link>
           </p>

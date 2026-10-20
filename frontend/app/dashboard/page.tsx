@@ -7,7 +7,7 @@ import axios from "axios";
 import type { Document } from "../../types";
 import { API_URL } from "../../lib/api";
 import dynamic from "next/dynamic";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, MotionConfig } from "framer-motion";
 import { useT } from "../../components/I18nProvider";
 import { DocumentListSkeleton } from "../../components/Skeleton";
 import ReviewChip from "../../components/ReviewChip";
@@ -274,23 +274,26 @@ export default function DashboardPage() {
           <DocumentListSkeleton />
         ) : (
           <div className="space-y-6">
-            <AnimatePresence>
-              {documents.length > 0 ? (
-                documents.map((doc) => (
-                  <DocumentCard
-                    key={doc.ID}
-                    doc={doc}
-                    onDelete={handleDeleteDocument}
-                    onChange={handleChange}
-                    openStudy={doc.ID === newStudySet}
-                  />
-                ))
-              ) : (
-                <p className="rounded-2xl border border-dashed border-ink/30 p-8 text-center text-ink/70">
-                  {filtering ? t("dashboard.noMatch") : t("dashboard.empty")}
-                </p>
-              )}
-            </AnimatePresence>
+            {/* "user": a person who has asked their phone or computer for less motion gets cards that do not slide or grow. */}
+            <MotionConfig reducedMotion="user">
+              <AnimatePresence>
+                {documents.length > 0 ? (
+                  documents.map((doc) => (
+                    <DocumentCard
+                      key={doc.ID}
+                      doc={doc}
+                      onDelete={handleDeleteDocument}
+                      onChange={handleChange}
+                      openStudy={doc.ID === newStudySet}
+                    />
+                  ))
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-ink/30 p-8 text-center text-ink/70">
+                    {filtering ? t("dashboard.noMatch") : t("dashboard.empty")}
+                  </p>
+                )}
+              </AnimatePresence>
+            </MotionConfig>
           </div>
         )}
 
