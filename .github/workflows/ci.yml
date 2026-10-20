@@ -69,7 +69,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: pip
           cache-dependency-path: python-ai-service/requirements*.txt
       # The tests that read a scanned page for real need the Tesseract program, with English.
@@ -85,7 +85,11 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           python -m coverage report | tail -1 >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-      - run: pip-audit -r requirements.txt
+      # Eight published Pillow advisories (TIFF, GIF, EPS and PPM files, and saving into an existing PDF) are fixed in Pillow 13, but
+      # fastembed (search by meaning) does not allow Pillow 13 yet, so 12.3.0 stays. None of that code is reachable: photos.py opens
+      # only JPEG, PNG, WebP and HEIC (see tests: test_only_the_accepted_kinds_of_picture_are_opened...), and Pillow touches no other
+      # upload. Remove the ignores, and the Pillow rule in dependabot.yml, once fastembed allows Pillow 13.
+      - run: pip-audit -r requirements.txt --ignore-vuln GHSA-p4wg-p73j-c528 --ignore-vuln GHSA-65qm-jvmh-6pqg --ignore-vuln GHSA-58r4-6rv3-gfh8 --ignore-vuln GHSA-pchr-8j38-3x4p --ignore-vuln GHSA-q45j-58j2-45rg --ignore-vuln GHSA-462x-pgg6-55fp --ignore-vuln GHSA-c6hw-5grf-ff96 --ignore-vuln GHSA-vx6w-vv9f-6gvg
 
   frontend:
     runs-on: ubuntu-latest
@@ -122,7 +126,7 @@ jobs:
           fetch-depth: 0 # the changelog reads the whole history
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - run: pip install openapi-spec-validator==0.9.0 pyyaml==6.0.3
       - run: python scripts/validate_openapi.py
       - run: sh scripts/test-hooks.sh
@@ -145,7 +149,7 @@ jobs:
           node-version: 22
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - run: node --test "extension/test/*.test.mjs"
       - name: Build the packages
         run: |

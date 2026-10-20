@@ -21,6 +21,10 @@ updates:
     groups:
       python-minor-and-patch:
         update-types: [minor, patch]
+    # Pillow 13 cannot be installed together with fastembed (it asks for Pillow below 13); see the pip-audit step in ci.yml.
+    ignore:
+      - dependency-name: pillow
+        versions: [">=13"]
 
   - package-ecosystem: npm
     directory: /frontend
