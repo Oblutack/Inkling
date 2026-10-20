@@ -91,6 +91,21 @@ def test_a_heic_picture_that_is_cut_short_is_a_plain_error():
     assert caught.value.status == 422 and "IMG_0042.HEIC" in caught.value.message
 
 
+@pytest.mark.parametrize("fmt", ["TIFF", "GIF", "BMP", "PPM", "EPS", "PDF"])
+def test_only_the_accepted_kinds_of_picture_are_opened_whatever_the_file_is_called(fmt, monkeypatch):
+    # Pillow's other readers are not even tried: nothing of a TIFF, GIF, EPS or PPM file is parsed
+    other = encoded(Image.new("RGB", (60, 60), "white"), fmt)
+    opened = []
+    real_open = Image.open
+    monkeypatch.setattr(
+        Image, "open", lambda fp, mode="r", formats=None: opened.append(formats) or real_open(fp, mode, formats)
+    )
+    with pytest.raises(ocr.OcrError) as caught:
+        photos.prepare(other, "holiday.jpg")
+    assert caught.value.status == 422 and "not a JPG, PNG, WebP or HEIC picture" in caught.value.message
+    assert opened == [list(photos.IMAGE_FORMATS)]
+
+
 def test_a_see_through_png_is_read_on_white_paper():
     image = Image.new("RGBA", (800, 800), (0, 0, 0, 0))
     ImageDraw.Draw(image).rectangle((100, 100, 200, 200), fill=(0, 0, 0, 255))

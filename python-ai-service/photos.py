@@ -71,7 +71,12 @@ def prepare(content: bytes, name: str) -> Image.Image:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", Image.DecompressionBombWarning)
-            picture: Image.Image = Image.open(io.BytesIO(content))
+            # Only the readers of the formats that are accepted are tried: a TIFF, GIF, EPS or PPM file, whatever it is
+            # called, never reaches the code that reads those (where Pillow's published security problems are).
+            try:
+                picture: Image.Image = Image.open(io.BytesIO(content), formats=list(IMAGE_FORMATS))
+            except Image.UnidentifiedImageError:
+                raise ocr.OcrError(422, f"{name} is not a JPG, PNG, WebP or HEIC picture.") from None
             if picture.format not in IMAGE_FORMATS:
                 raise ocr.OcrError(422, f"{name} is not a JPG, PNG, WebP or HEIC picture.")
             if picture.width * picture.height > MAX_PIXELS:
