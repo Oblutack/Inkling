@@ -11,7 +11,7 @@ pypdf==6.19.0
 # Reading scanned pages: PDFium draws a page as a picture (pillow holds it) and Tesseract, a program installed in the
 # image (see the Dockerfile), reads it. See ocr.py.
 pypdfium2==5.14.0
-pillow==12.3.0
+pillow==13.0.0
 # HEIC photos (what an iPhone saves, and a Mac exports): Pillow opens them once this is loaded. See photos.py.
 pillow-heif==1.8.0
 
