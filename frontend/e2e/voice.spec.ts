@@ -27,6 +27,7 @@ test.describe("talking to a document", () => {
     await chat.getByTestId("voice-button").click();
     await expect(chat.getByTestId("voice-listening")).toBeVisible();
     const heard = page.waitForResponse((r) => r.url().endsWith("/voice/transcribe") && r.status() === 200);
+    await page.waitForTimeout(700); // a recording stopped the instant it starts holds no sound yet, under load
     await chat.getByRole("button", { name: "Stop and ask" }).click();
     await heard;
 
@@ -58,6 +59,7 @@ test.describe("talking to a document", () => {
     const chat = await openChat(page);
     await chat.getByLabel("Read answers aloud").check();
     await chat.getByTestId("voice-button").click();
+    await page.waitForTimeout(700); // a recording stopped the instant it starts holds no sound yet, under load
     await chat.getByRole("button", { name: "Stop and ask" }).click();
     await expect(chat.getByText(`Stub answer to "${QUESTION}"`)).toBeVisible();
 
@@ -88,6 +90,7 @@ test.describe("talking to a document", () => {
     await expect(chat.getByLabel("Read answers aloud")).toBeChecked(); // it reads the answers, so the voice can be waited for
     await expect(chat.getByTestId("voice-listening")).toBeVisible();
 
+    await page.waitForTimeout(700); // a recording stopped the instant it starts holds no sound yet, under load
     await chat.getByRole("button", { name: "Stop and ask" }).click();
     await expect(chat.getByText(`Stub answer to "${QUESTION}"`)).toBeVisible();
     await expect.poll(async () => (await spoken(page)).length).toBe(1);
@@ -112,6 +115,7 @@ test.describe("talking to a document", () => {
       }),
     );
     await chat.getByLabel("Hands-free").check();
+    await page.waitForTimeout(700); // a recording stopped the instant it starts holds no sound yet, under load
     await chat.getByRole("button", { name: "Stop and ask" }).click();
     await expect(chat.getByRole("alert")).toContainText("No speech was found");
     await expect(chat.getByLabel("Hands-free")).not.toBeChecked();
