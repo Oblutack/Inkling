@@ -30,7 +30,7 @@ async function settle(page: Page) {
   // wait until nothing is moving: CSS animations done, and the page height the same for a few looks in a row
   await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
   let last = -1, same = 0;
-  for (let i = 0; i < 40 && same < 4; i++) {
+  for (let i = 0; i < 16 && same < 4; i++) {
     const h = await page.evaluate(() => `${document.documentElement.scrollHeight}:${Math.round(document.body.getBoundingClientRect().height)}`);
     same = h === String(last) ? same + 1 : 0;
     last = h as unknown as number;

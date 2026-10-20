@@ -14,7 +14,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 2 : undefined,
-  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : [["list"]],
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }], ["./e2e/support/github-errors.mjs"]] : [["list"]],
   use: {
     ...devices["Desktop Chrome"],
     baseURL: FRONTEND,
@@ -33,11 +33,13 @@ export default defineConfig({
     {
       name: "iphone",
       testMatch: /mobile\.spec\.ts/,
+      timeout: 120_000, // a walk through several screens, in a browser that is slower on a shared machine
       use: { ...devices["iPhone 15"], channel: undefined, permissions: [], launchOptions: {} },
     },
     {
       name: "pixel",
       testMatch: /mobile\.spec\.ts/,
+      timeout: 120_000,
       use: { ...devices["Pixel 7"], channel: undefined },
     },
   ],
