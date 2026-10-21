@@ -16,7 +16,6 @@ from fastapi.responses import Response, StreamingResponse
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel
-from pypdf import PdfReader
 
 import bilingual
 import checklists
@@ -26,6 +25,7 @@ import embeddings
 import extraction
 import glossary
 import ocr
+import pdf_text
 import photos
 from attribution import check_summary
 from cache import from_env as cache_from_env
@@ -117,6 +117,15 @@ CHUNK_SIZE = 4_000
 CHUNK_OVERLAP = 200
 # If the joined chunk summaries are still longer than this, they are summarized again.
 REDUCE_MAX_CHARS = 24_000
+# What one round of condensing aims for, and how it is shared out: each section is given a number of words to write,
+# because a model asked only to be concise writes back nearly as much as it was given (a document of 16 sections
+# came back as 15, and so on round after round).
+ROUND_TARGET_CHARS = REDUCE_MAX_CHARS * 3 // 4
+CHARS_PER_WORD = 6
+MIN_SECTION_WORDS = 40
+# A round that keeps more than this share of the text gets a tighter budget next time; and rounds never go on for ever.
+ROUND_KEEPS_AT_MOST = 0.7
+MAX_ROUNDS = 6
 # Cap parallel LLM calls so long documents don't trip the provider's rate limit.
 MAX_CONCURRENT_LLM_CALLS = 3
 
@@ -396,7 +405,7 @@ def skim(text: str, skim_chars: int) -> str:
 
 def extract_pdf_text(path: str) -> str:
     # Page breaks are kept (as form feeds) so chat answers can cite the page they came from.
-    return PAGE_BREAK.join(page.extract_text() or "" for page in PdfReader(path).pages)
+    return PAGE_BREAK.join(pdf_text.page_texts(path))
 
 
 def ocr_http_error(exc: "ocr.OcrError") -> HTTPException:
@@ -1531,34 +1540,52 @@ def split_text(text: str) -> list[str]:
     return [chunk.page_content for chunk in splitter.create_documents([text])]
 
 
+def section_words(sections: int, tighten: float = 1.0) -> int:
+    """How many words each section may be summarized in, so that a whole round fits the round's target."""
+    fits = ROUND_TARGET_CHARS // CHARS_PER_WORD // max(sections, 1)
+    # Never more than a little under half of what a section holds, so that every round really shortens the text.
+    roomy = int(CHUNK_SIZE / CHARS_PER_WORD * 0.4)
+    return max(MIN_SECTION_WORDS, int(min(fits, roomy) * tighten))
+
+
 async def condense(text: str, progress: Optional[ProgressCallback] = None) -> str:
     """Map step: summarize each chunk, repeating until the result fits in a single reduce prompt.
 
     `progress(done, total)` is called as each chunk of the current round finishes."""
-    while True:
+    tighten = 1.0
+    for _ in range(MAX_ROUNDS):
         chunks = split_text(text)
         finished = 0
+        words = section_words(len(chunks), tighten)
 
-        async def summarize_chunk(chunk: str, total: int) -> str:
+        async def summarize_chunk(chunk: str, total: int, words: int) -> str:
             nonlocal finished
             result = await call_llm(
-                "Summarize the following text concisely, focusing on the key points. Keep every figure, name and "
-                "date exactly as written, with what it belongs to, and add nothing that is not in the text:"
-                "\n\n---\n\n" + chunk
+                f"Summarize the following text concisely, in at most {words} words, focusing on the key points. "
+                "Keep every figure, name and date exactly as written, with what it belongs to, and add nothing that "
+                "is not in the text:\n\n---\n\n" + chunk
             )
             finished += 1
             if progress:
                 progress(finished, total)
             return result
 
-        results = await asyncio.gather(*(summarize_chunk(chunk, len(chunks)) for chunk in chunks))
+        results = await asyncio.gather(*(summarize_chunk(chunk, len(chunks), words) for chunk in chunks))
         combined = "\n\n".join(r for r in results if r)
         if not combined:
             raise ValueError("Failed to generate intermediate summaries from the document.")
         # A single pass over a single chunk can't shrink further; stop to avoid looping forever.
         if len(combined) <= REDUCE_MAX_CHARS or len(chunks) == 1:
             return combined
+        if len(combined) > len(text) * ROUND_KEEPS_AT_MOST:
+            tighten *= 0.5
         text = combined
+    # Rounds are limited, so a model that will not shorten the text cannot keep the request busy for ever.
+    # What is left is cut to what a single prompt can hold (the end of a very long document is lost; that is logged).
+    logger.warning(
+        "condensing stopped after %d rounds with %d characters left; cut to %d", MAX_ROUNDS, len(text), REDUCE_MAX_CHARS
+    )
+    return text[:REDUCE_MAX_CHARS]
 
 
 def target_words_for(word_count: int, page_limit: int) -> int:

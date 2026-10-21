@@ -134,6 +134,58 @@ def test_the_step_for_long_documents_keeps_figures_as_written(llm):
     assert steps and all("exactly as written" in p for p in steps)
 
 
+# --- long documents are condensed in rounds that really shorten the text ---
+
+LONG_DOCUMENT = (
+    "A sentence of the document that says something. " * 80 + "\n\n"
+) * 16  # about 16 sections of 4000 characters
+
+
+class ModelThatDoesNotShorten(FakeLLM):
+    """Writes back what it was given: the case found with a 77-page PDF (a round turned 16 sections into 15)."""
+
+    async def ainvoke(self, prompt):
+        self.reply = prompt.split("\n\n---\n\n", 1)[-1]
+        return await super().ainvoke(prompt)
+
+
+class ModelThatKeepsToTheBudget(FakeLLM):
+    async def ainvoke(self, prompt):
+        import re
+
+        words = int(re.search(r"at most (\d+) words", prompt).group(1))
+        self.reply = " ".join(["word"] * words)
+        return await super().ainvoke(prompt)
+
+
+def test_each_section_gets_a_word_budget_that_fits_the_round():
+    assert main.section_words(16) == 187
+    assert main.section_words(2) == 266  # never more than a little under half of a section
+    assert main.section_words(500) == main.MIN_SECTION_WORDS
+    assert main.section_words(16, 0.5) < main.section_words(16)
+
+
+def test_a_model_that_keeps_to_the_budget_is_done_in_one_round(monkeypatch):
+    fake = ModelThatKeepsToTheBudget()
+    monkeypatch.setattr(main, "get_llm", lambda: fake)
+    result = asyncio.run(main.condense(LONG_DOCUMENT))
+    assert len(result) <= main.REDUCE_MAX_CHARS
+    assert len(fake.prompts) == len(main.split_text(LONG_DOCUMENT))
+    assert all("in at most 187 words" in p for p in fake.prompts)
+
+
+def test_a_model_that_does_not_shorten_cannot_keep_the_request_going_for_ever(monkeypatch):
+    fake = ModelThatDoesNotShorten()
+    monkeypatch.setattr(main, "get_llm", lambda: fake)
+    result = asyncio.run(main.condense(LONG_DOCUMENT))
+    assert len(result) <= main.REDUCE_MAX_CHARS
+    sections = len(main.split_text(LONG_DOCUMENT))
+    assert len(fake.prompts) <= main.MAX_ROUNDS * sections
+    # and the budget got tighter each time the text did not shrink
+    budgets = [int(p.split("at most ")[1].split(" words")[0]) for p in fake.prompts]
+    assert budgets[-1] < budgets[0]
+
+
 def test_a_prompt_change_gets_a_new_version_so_old_cached_summaries_are_not_reused():
     from prompts import PROMPT_VERSION
 
