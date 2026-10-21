@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { API_URL } from "../lib/api";
 import type { MessageKey } from "../lib/i18n";
 import { useT } from "./I18nProvider";
+import LandingMotion from "./LandingMotion";
 import { SkeletonLine } from "./Skeleton";
 
 const EInkForm = dynamic(() => import("./EInkForm"), {
@@ -25,6 +26,9 @@ function Icon({ children }: { children: React.ReactNode }) {
     </svg>
   );
 }
+
+// What it reads, as the names people know the files by (the same in every language).
+const FILE_KINDS = [".pdf", ".docx", ".pptx", "https://", ".jpg", ".png", ".heic", ".mp3", ".wav", ".m4a", ".webm", "text"];
 
 const FEATURES: {
   key: "inputs" | "cited" | "proof" | "compare" | "extract" | "library" | "listen" | "languages" | "share";
@@ -62,7 +66,8 @@ const FEATURES: {
 function Preview() {
   const t = useT();
   return (
-    <div className="card relative mx-auto w-full max-w-md" aria-hidden="true">
+    <div className="card relative mx-auto w-full max-w-md overflow-hidden" aria-hidden="true">
+      <div className="scan" style={{ "--scan-distance": "380px" } as React.CSSProperties} />
       <div className="flex items-start justify-between gap-3">
         <p className="font-semibold">{t("preview.title")}</p>
         <span className="chip pop pointer-events-none text-xs" style={{ animationDelay: "2.3s" }}>
@@ -85,7 +90,15 @@ function Preview() {
               }`}
               style={{ animationDelay: `${700 + i * 500}ms` }}
             >
-              {state === "found" ? "✓" : "✕"}
+              {/* The mark is drawn stroke by stroke just after the badge appears. */}
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                <path
+                  d={state === "found" ? "M5 12.5l4.5 4.5L19 7.5" : "M6 6l12 12M18 6L6 18"}
+                  pathLength={1}
+                  className="draw"
+                  style={{ animationDelay: `${950 + i * 500}ms` }}
+                />
+              </svg>
             </span>
             <span>
               <span className="reading block text-base">{t(`preview.${sentence}`)}</span>
@@ -127,12 +140,19 @@ export default function Landing() {
 
   return (
     <>
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-14 pt-10 md:grid-cols-[1.15fr_1fr] md:pt-16">
+      <LandingMotion />
+      <section className="relative isolate mx-auto grid max-w-6xl items-center gap-10 px-4 pb-10 pt-10 md:grid-cols-[1.15fr_1fr] md:pt-16">
+        {/* The glows sit in a layer of their own that is clipped to the width of the page, so they never make it scroll sideways. */}
+        <div className="pointer-events-none absolute inset-x-0 -inset-y-16 -z-10 overflow-hidden" aria-hidden="true">
+          <div className="glow glow-a left-2 top-6 h-[24rem] w-[24rem] max-w-[90%]" />
+          <div className="glow glow-b bottom-4 right-2 h-[22rem] w-[22rem] max-w-[85%]" />
+        </div>
         <div>
           <h1 className="text-4xl leading-[1.08] sm:text-5xl lg:text-6xl">{t("hero.title")}</h1>
+          <span className="ink-rule mt-5" aria-hidden="true" />
           <p className="reading mt-5 max-w-xl text-ink/80">{t("hero.subtitle")}</p>
           <div className="rise mt-7 flex flex-wrap gap-3" style={{ "--wait": "150ms" } as React.CSSProperties}>
-            <a href="#try" className="btn btn-primary text-lg">
+            <a href="#try" className="btn btn-primary btn-glint text-lg">
               {t("hero.tryNow")}
             </a>
             {accountButton}
@@ -141,8 +161,26 @@ export default function Landing() {
             {t("hero.note")}
           </p>
         </div>
-        <Preview />
+        <div className="float">
+          <Preview />
+        </div>
       </section>
+
+      {/* The kinds of file it reads, passing by (decorative: the list is in the text above). */}
+      <div className="marquee mx-auto mb-12 max-w-6xl" aria-hidden="true">
+        <div className="marquee-track">
+          {/* Four copies of the list (the strip moves by half of its length and starts again): enough that the strip never runs out on a wide screen. */}
+          {[0, 1, 2, 3].map((copy) => (
+            <ul key={copy} className="flex shrink-0 items-center gap-3 pr-3">
+              {FILE_KINDS.map((kind) => (
+                <li key={kind} className="rounded-full border border-ink/25 bg-surface/70 px-4 py-1.5 font-mono text-sm text-ink/80">
+                  {kind}
+                </li>
+              ))}
+            </ul>
+          ))}
+        </div>
+      </div>
 
       <section id="try" className="mx-auto max-w-4xl scroll-mt-20 px-4 pb-16" aria-labelledby="try-heading">
         <h2 id="try-heading" className="text-3xl md:text-4xl">
@@ -160,8 +198,8 @@ export default function Landing() {
         </h2>
         <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(({ key, icon }, i) => (
-            <li key={key} className="reveal card" style={{ "--i": i % 3 } as React.CSSProperties}>
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
+            <li key={key} className="reveal lift card" style={{ "--i": i % 3 } as React.CSSProperties}>
+              <span className="lift-icon flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
                 <Icon>{icon}</Icon>
               </span>
               <h3 className="mt-4 text-lg font-semibold">{t(`features.${key}.title` as MessageKey)}</h3>
@@ -178,7 +216,7 @@ export default function Landing() {
         <ol className="mt-6 grid gap-6 md:grid-cols-3">
           {(["one", "two", "three"] as const).map((step, i) => (
             <li key={step} className="reveal flex gap-4" style={{ "--i": i } as React.CSSProperties}>
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-ink text-base font-bold text-canvas">{i + 1}</span>
+              <span className="spring flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-ink text-base font-bold text-canvas">{i + 1}</span>
               <div>
                 <h3 className="text-lg font-semibold">{t(`steps.${step}.title`)}</h3>
                 <p className="muted mt-1">{t(`steps.${step}.text`)}</p>
@@ -192,8 +230,8 @@ export default function Landing() {
         <div className="reveal card flex flex-col gap-4 md:flex-row md:items-center md:gap-8 md:p-8">
           <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-accent/15 text-accent">
             <Icon>
-              <path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6z" />
-              <path d="M9 12l2 2 4-4" />
+              <path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6z" pathLength={1} className="ink" />
+              <path d="M9 12l2 2 4-4" pathLength={1} className="ink" />
             </Icon>
           </span>
           <div>
@@ -213,7 +251,7 @@ export default function Landing() {
             </h2>
             <p className="muted mt-2">{t("cta.text")}</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link href="/signup" className="btn btn-primary text-lg">
+              <Link href="/signup" className="btn btn-primary btn-glint text-lg">
                 {t("hero.createAccount")}
               </Link>
               <Link href="/login" className="btn btn-secondary">
