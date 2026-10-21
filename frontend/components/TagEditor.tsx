@@ -54,10 +54,13 @@ export default function TagEditor({ documentId, tags, onChange }: TagEditorProps
             type="button"
             onClick={() => save(tags.filter((other) => other !== tag))}
             disabled={saving}
-            className="tap-extend -mr-1.5 flex h-5 w-5 items-center justify-center rounded-full text-base leading-none text-ink/70 hover:bg-ink/10 hover:text-danger"
+            className="tap-extend -mr-1.5 flex h-5 w-5 items-center justify-center rounded-full text-ink/70 transition-colors hover:bg-ink/10 hover:text-danger"
             aria-label={t("tags.remove", { tag })}
           >
-            &times;
+            {/* Drawn, not typed: the cross of a font sits a little low in its circle. */}
+            <svg viewBox="0 0 10 10" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+              <path d="M1.5 1.5l7 7M8.5 1.5l-7 7" />
+            </svg>
           </button>
         </span>
       ))}
@@ -69,7 +72,10 @@ export default function TagEditor({ documentId, tags, onChange }: TagEditorProps
             maxLength={MAX_TAG_CHARS}
             placeholder={t("tags.placeholder")}
             aria-label={t("tags.add")}
-            className="h-8 w-24 rounded-full border border-dashed border-ink/40 bg-transparent px-3 text-sm focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+            // The same height as the tags next to it; the word is in the middle until something is typed.
+            className={`h-[26px] w-20 rounded-full border border-dashed border-ink/40 bg-transparent px-3 text-sm focus:w-28 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 [@media(pointer:coarse)]:!min-h-[40px] ${
+              draft ? "text-left" : "text-center"
+            } transition-[width] duration-200`}
           />
         </form>
       )}
