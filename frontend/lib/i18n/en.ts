@@ -36,6 +36,8 @@ export const en = {
   "login.googleError": "Google Login Failed",
   "signup.title": "Sign Up",
   "signup.failed": "An unexpected error occurred.",
+  "signup.google": "Sign up with Google",
+  "signup.googleUseLogin": "That account already exists and asks for a code from an app. Please use Login instead.",
   "signup.checkTitle": "Check your email",
   "signup.sentBefore": "We sent a confirmation link to ",
   "signup.sentAfter": ". Open it to confirm your address.",

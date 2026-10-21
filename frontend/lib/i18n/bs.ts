@@ -38,6 +38,8 @@ export const bs: Record<MessageKey, string> = {
   "login.googleError": "Prijava putem Googlea nije uspjela",
   "signup.title": "Registracija",
   "signup.failed": "Došlo je do neočekivane greške.",
+  "signup.google": "Registruj se putem Googlea",
+  "signup.googleUseLogin": "Taj račun već postoji i traži kod iz aplikacije. Koristi prijavu.",
   "signup.checkTitle": "Provjerite e-poštu",
   "signup.sentBefore": "Poslali smo link za potvrdu na adresu ",
   "signup.sentAfter": ". Otvorite ga da potvrdite svoju adresu.",

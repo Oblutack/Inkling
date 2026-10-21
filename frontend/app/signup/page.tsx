@@ -3,6 +3,9 @@
 import { useState } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
+import GoogleSignIn, { type FirstStep } from "../../components/GoogleSignIn";
 import FormContainer from "../../components/FormContainer";
 import TurnstileWidget, { turnstileEnabled } from "../../components/Turnstile";
 import { ErrorText, Field, PrimaryButton } from "../../components/ui";
@@ -11,6 +14,8 @@ import { useT } from "../../components/I18nProvider";
 
 export default function SignupPage() {
   const t = useT();
+  const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,6 +23,17 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [humanToken, setHumanToken] = useState("");
   const [humanReset, setHumanReset] = useState(0);
+
+  // Google has vouched for the address, so there is no mail to confirm: a new account is made and signed in at once.
+  const googleDone = (data: FirstStep) => {
+    if (data.user) {
+      login(data.user);
+      router.push("/dashboard");
+    } else {
+      // An account that already exists and uses two-step sign-in has to go through the login page, where the code is asked for.
+      setError(t("signup.googleUseLogin"));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,6 +111,8 @@ export default function SignupPage() {
           {submitting ? t("signup.creating") : t("signup.title")}
         </PrimaryButton>
       </form>
+
+      <GoogleSignIn label={t("signup.google")} onDone={googleDone} onError={setError} />
     </FormContainer>
   );
 }

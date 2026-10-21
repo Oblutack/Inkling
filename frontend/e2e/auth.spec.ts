@@ -2,6 +2,13 @@ import { expect, test } from "@playwright/test";
 import { alertOf, emailedLink, logIn, newSignedInUser, PASSWORD, signUp, uniqueEmail } from "./support/helpers";
 
 test.describe("authentication", () => {
+  test("both the login and the sign-up page offer Google", async ({ page }) => {
+    await page.goto("/login");
+    await expect(page.getByRole("button", { name: "Sign in with Google" })).toBeVisible();
+    await page.goto("/signup");
+    await expect(page.getByRole("button", { name: "Sign up with Google" })).toBeVisible();
+  });
+
   test("protected pages send visitors to the login page", async ({ page }) => {
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/login/);

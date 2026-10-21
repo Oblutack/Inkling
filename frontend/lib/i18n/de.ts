@@ -38,6 +38,8 @@ export const de: Record<MessageKey, string> = {
   "login.googleError": "Die Anmeldung mit Google ist fehlgeschlagen",
   "signup.title": "Registrieren",
   "signup.failed": "Ein unerwarteter Fehler ist aufgetreten.",
+  "signup.google": "Mit Google registrieren",
+  "signup.googleUseLogin": "Dieses Konto gibt es schon und verlangt einen Code aus einer App. Bitte nutze stattdessen die Anmeldung.",
   "signup.checkTitle": "Prüfen Sie Ihr Postfach",
   "signup.sentBefore": "Wir haben einen Bestätigungslink an ",
   "signup.sentAfter": " geschickt. Öffnen Sie ihn, um Ihre Adresse zu bestätigen.",
