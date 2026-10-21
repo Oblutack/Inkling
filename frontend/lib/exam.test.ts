@@ -1,5 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { collectionsOf, elapsedSeconds, formatClock, mark, percentOf, resultBody, setsOfCollection, timeLimit, trend, type ExamQuestion, type ExamSet } from "./exam";
+import {
+  collectionsOf,
+  elapsedSeconds,
+  formatClock,
+  mark,
+  percentOf,
+  reopened,
+  resultBody,
+  setsOfCollection,
+  timeLimit,
+  trend,
+  type ExamQuestion,
+  type ExamSet,
+  type PastExam,
+} from "./exam";
 
 const q = (documentId: number, title: string, answer: number, text = `Q${documentId}-${answer}`): ExamQuestion => ({
   documentId,
@@ -101,9 +115,11 @@ describe("collections", () => {
 });
 
 describe("resultBody", () => {
-  it("sends the score, the breakdown and only which questions were missed", () => {
-    const marked = mark([q(1, "Biology", 0), q(1, "Biology", 2)], [0, 3]);
-    expect(resultBody("law", [1], marked, 95)).toEqual({
+  it("sends the score, the breakdown, the missed questions and every question with what was chosen", () => {
+    const questions = [q(1, "Biology", 0), q(1, "Biology", 2)];
+    const answers = [0, 3];
+    const marked = mark(questions, answers);
+    expect(resultBody("law", [1], marked, 95, questions, answers)).toEqual({
       tag: "law",
       documentIds: [1],
       questions: 2,
@@ -111,7 +127,65 @@ describe("resultBody", () => {
       seconds: 95,
       breakdown: [{ documentId: 1, title: "Biology", questions: 2, correct: 1 }],
       missed: [{ documentId: 1, question: "Q1-2" }],
+      detail: [
+        { ...questions[0], chosen: 0 },
+        { ...questions[1], chosen: 3 },
+      ],
     });
+  });
+
+  it("sends null for a question that was left alone", () => {
+    const questions = [q(1, "Biology", 0), q(1, "Biology", 1)];
+    const answers = [0, null];
+    const body = resultBody("", [1], mark(questions, answers), 30, questions, answers);
+    expect(body.detail.map((d) => d.chosen)).toEqual([0, null]);
+  });
+});
+
+describe("reopened", () => {
+  const record = { id: 7, tag: "law", questions: 3, correct: 1, seconds: 80, finishedAt: "2026-10-18T10:00:00Z" };
+
+  it("marks a past exam again from its questions and what was chosen, so it reads like a fresh result", () => {
+    const questions = [q(1, "Biology", 0), q(1, "Biology", 1), q(2, "Law", 2)];
+    const past: PastExam = {
+      ...record,
+      breakdown: [],
+      missed: [],
+      detail: [
+        { ...questions[0], chosen: 0 }, // right
+        { ...questions[1], chosen: 3 }, // wrong
+        { ...questions[2], chosen: null }, // left alone
+      ],
+    };
+    const { marked, complete } = reopened(past);
+    expect(complete).toBe(true);
+    expect(marked.correct).toBe(1);
+    expect(marked.total).toBe(3);
+    expect(marked.missed.map((m) => [m.question.question, m.chosen])).toEqual([
+      [questions[1].question, 3],
+      [questions[2].question, null],
+    ]);
+    expect(marked.breakdown.map((b) => [b.title, b.correct, b.questions])).toEqual([
+      ["Biology", 1, 2],
+      ["Law", 0, 1],
+    ]);
+  });
+
+  it("keeps what an exam from before the questions were kept has: the score, the sets and the missed questions", () => {
+    const past: PastExam = {
+      ...record,
+      breakdown: [{ documentId: 1, title: "Biology", questions: 3, correct: 1 }],
+      missed: [{ documentId: 1, question: "Which one?" }],
+      detail: null,
+    };
+    const { marked, complete } = reopened(past);
+    expect(complete).toBe(false);
+    expect(marked.correct).toBe(1);
+    expect(marked.percent).toBe(33);
+    expect(marked.breakdown).toEqual(past.breakdown);
+    expect(marked.missed).toHaveLength(1);
+    expect(marked.missed[0].question.question).toBe("Which one?");
+    expect(marked.missed[0].question.options).toEqual([]);
   });
 });
 

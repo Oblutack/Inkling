@@ -112,8 +112,21 @@ export function setsOfCollection(sets: readonly ExamSet[], tag: string): ExamSet
   return sets.filter((s) => s.tags.includes(tag));
 }
 
-// What is sent to be kept once an exam is finished.
-export function resultBody(tag: string, documentIds: number[], marked: Marked, seconds: number) {
+// One question of a finished exam as the server keeps it: the question as it was asked, and the option chosen (null when it was left alone).
+export interface KeptQuestion extends ExamQuestion {
+  chosen: number | null;
+}
+
+// What is sent to be kept once an exam is finished: the score, how each set did, and every question as it was asked with what was
+// chosen, so the exam can be opened again later.
+export function resultBody(
+  tag: string,
+  documentIds: number[],
+  marked: Marked,
+  seconds: number,
+  questions: readonly ExamQuestion[],
+  answers: ReadonlyArray<number | null>
+) {
   return {
     tag,
     documentIds,
@@ -122,9 +135,11 @@ export function resultBody(tag: string, documentIds: number[], marked: Marked, s
     seconds,
     breakdown: marked.breakdown,
     missed: marked.missed.map((m) => ({ documentId: m.question.documentId, question: m.question.question })),
+    detail: questions.map((question, i): KeptQuestion => ({ ...question, chosen: answers[i] ?? null })),
   };
 }
 
+// A past exam in the list: when, what it was drawn from, how it went, and whether it can be opened with all of its questions.
 export interface ExamRecord {
   id: number;
   tag: string;
@@ -132,6 +147,46 @@ export interface ExamRecord {
   correct: number;
   seconds: number;
   finishedAt: string;
+  // How many sets it was drawn from, and whether its questions were kept (exams taken before that was added have only a score).
+  sets?: number;
+  hasDetail?: boolean;
+}
+
+// A past exam opened: the record, how each set did, the questions that were missed and, when they were kept, every question.
+export interface PastExam extends ExamRecord {
+  breakdown: Breakdown[];
+  missed: Array<{ documentId: number; question: string }>;
+  detail: KeptQuestion[] | null;
+}
+
+// A past exam laid out the way a finished one is, to be looked through again. `complete` is false for an exam taken before the
+// questions were kept: then only the score, the sets and the text of the questions that were missed are known.
+export function reopened(past: PastExam): { marked: Marked; complete: boolean } {
+  if (past.detail && past.detail.length > 0) {
+    const questions: ExamQuestion[] = past.detail.map(({ chosen: _chosen, ...question }) => question);
+    return {
+      marked: mark(
+        questions,
+        past.detail.map((d) => d.chosen)
+      ),
+      complete: true,
+    };
+  }
+  const missed: Missed[] = past.missed.map((m) => ({
+    question: { documentId: m.documentId, documentTitle: "", question: m.question, options: [], answer: -1, explanation: "" },
+    chosen: null,
+  }));
+  return {
+    marked: {
+      correct: past.correct,
+      total: past.questions,
+      percent: percentOf(past.correct, past.questions),
+      answered: past.questions,
+      missed,
+      breakdown: past.breakdown,
+    },
+    complete: false,
+  };
 }
 
 // The scores of past exams, oldest first, as percentages (for a small chart of how a collection is going).
