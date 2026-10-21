@@ -80,8 +80,10 @@
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+      transition-delay: 0ms !important;
     }
   }
 }
@@ -117,7 +119,11 @@ body::before {
 
   /* Buttons */
   .btn {
-    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-5 py-2 text-base font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-5 py-2 text-base font-semibold transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  /* A button gives a little under the finger. */
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
   }
   .btn-primary {
     @apply bg-accent text-accent-fg hover:bg-accent/90;
@@ -156,6 +162,9 @@ body::before {
   .chip[aria-pressed="true"] {
     @apply border-accent bg-accent text-accent-fg hover:bg-accent/90;
   }
+  .chip {
+    @apply transition-colors duration-150;
+  }
 
   /* Text people read for a while: summaries, answers, shared pages. */
   .reading {
@@ -176,6 +185,169 @@ body::before {
 }
 .page-enter {
   animation: page-enter 0.2s ease-out backwards;
+}
+
+/* Motion for the rest of the app: calm, short, and made only of fades and small moves (transform and opacity, which a phone can do
+   without work). Every animation here is a CSS animation, so the reduced-motion rule above turns all of them into "already there".
+   --i is a step in a sequence (0, 1, 2 ...) and sets how long an item waits behind the one before it. */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise, 12px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ink-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+@keyframes flip-in {
+  from {
+    opacity: 0;
+    transform: perspective(600px) rotateX(-14deg) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Something arriving: it rises a little as it fades in. */
+.rise {
+  animation: rise 0.55s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 80ms + var(--wait, 0ms));
+}
+/* A smaller version for lines in a list, a chat message. */
+.rise-sm {
+  --rise: 6px;
+  animation: rise 0.32s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms + var(--wait, 0ms));
+}
+/* A small mark that appears with a little spring (a tick, a point on the map). */
+.pop {
+  animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms + var(--wait, 0ms));
+}
+/* A panel that opens inside a card. */
+.panel-in {
+  animation: rise 0.3s var(--ease-out) backwards;
+  --rise: -6px;
+}
+/* A line drawn from one end to the other (the lines of the mind map). Needs pathLength="1" on the path. */
+.draw {
+  animation: draw 0.6s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms + var(--wait, 0ms));
+}
+/* The text of a card being turned over. */
+.flip-in {
+  animation: flip-in 0.28s var(--ease-out) backwards;
+}
+
+/* A light moving across something that is still loading. */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(var(--ink) / 0.09), transparent);
+  animation: sweep 1.6s ease-in-out infinite;
+}
+.shimmer-on-accent::after {
+  background: linear-gradient(90deg, transparent, rgb(var(--accent-fg) / 0.4), transparent);
+}
+
+/* A summary being written: each new paragraph, list item or heading settles onto the page. Only the new ones animate, because the
+   ones already there are kept as they are while the text grows. */
+.stream-in :is(p, li, h1, h2, h3, h4, blockquote):not(li > p) {
+  animation: ink-in 0.5s var(--ease-out) backwards;
+}
+
+/* Three dots that breathe, for "working on it". */
+.dots span {
+  display: inline-block;
+  animation: breathe 1.3s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.18s);
+}
+
+/* Parts of the front page that ease in as the page is scrolled to them. The browser does it from the scroll position alone (no script runs,
+   so nothing is added to the time the page takes to open). Where the browser cannot, and for people who ask for less motion, the parts are
+   simply there. --i staggers the items of a row. */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry calc(var(--i, 0) * 7%) entry calc(35% + var(--i, 0) * 7%);
+    }
+  }
+}
+
+/* Changing the theme: the new colours spread out from the button (components/ThemeToggle.tsx). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
 
 /* On a touch screen (a phone or a tablet): controls big enough for a finger (44 px is what iPhones and Android both ask for), and
