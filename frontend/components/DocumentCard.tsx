@@ -401,7 +401,7 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
           </svg>
         </button>
         {moreOpen && (
-          <div id={`doc-more-${doc.ID}`} className="mt-1 flex flex-wrap items-center gap-1" data-testid="more-actions">
+          <div id={`doc-more-${doc.ID}`} className="panel-in mt-1 flex flex-wrap items-center gap-1" data-testid="more-actions">
             {!studySet && (
               <>
                 <ReadAloudToggle open={readOpen} onToggle={() => setReadOpen((open) => !open)} />
@@ -474,30 +474,86 @@ export default function DocumentCard({ doc, onDelete, onChange, openStudy = fals
         )}
       </div>
 
-      {readOpen && <ReadAloudPlayer markdown={doc.Summary} onClose={() => setReadOpen(false)} />}
-      {rewriteOpen && <RewritePanel documentId={doc.ID} onDone={summaryChanged} first={studySet} />}
-      {compareOpen && doc.hasContent && <ComparePanel doc={doc} />}
-      {extractOpen && doc.hasContent && <ExtractPanel doc={doc} />}
-      {datesOpen && doc.hasContent && <DatesPanel doc={doc} />}
-      {glossaryOpen && doc.hasContent && <GlossaryPanel doc={doc} onChange={setGlossary} />}
+      {readOpen && (
+        <div className="panel-in">
+          <ReadAloudPlayer markdown={doc.Summary} onClose={() => setReadOpen(false)} />
+        </div>
+      )}
+      {rewriteOpen && (
+        <div className="panel-in">
+          <RewritePanel documentId={doc.ID} onDone={summaryChanged} first={studySet} />
+        </div>
+      )}
+      {compareOpen && doc.hasContent && (
+        <div className="panel-in">
+          <ComparePanel doc={doc} />
+        </div>
+      )}
+      {extractOpen && doc.hasContent && (
+        <div className="panel-in">
+          <ExtractPanel doc={doc} />
+        </div>
+      )}
+      {datesOpen && doc.hasContent && (
+        <div className="panel-in">
+          <DatesPanel doc={doc} />
+        </div>
+      )}
+      {glossaryOpen && doc.hasContent && (
+        <div className="panel-in">
+          <GlossaryPanel doc={doc} onChange={setGlossary} />
+        </div>
+      )}
       {highlightsOpen && (
-        <HighlightsPanel
-          doc={doc}
-          files={pdfFiles}
-          version={highlightsVersion}
-          onOpen={(file, page, quote) => setViewing({ file, page, passage: quote })}
-        />
+        <div className="panel-in">
+          <HighlightsPanel
+            doc={doc}
+            files={pdfFiles}
+            version={highlightsVersion}
+            onOpen={(file, page, quote) => setViewing({ file, page, passage: quote })}
+          />
+        </div>
       )}
-      {bilingualOpen && !studySet && <BilingualPanel doc={doc} />}
-      {checklistOpen && doc.hasContent && <ChecklistPanel doc={doc} />}
-      {textOpen && doc.hasContent && !recordingFile && <OriginalText documentId={doc.ID} transcript={transcript} />}
-      {recordingOpen && recordingFile && <RecordingPanel documentId={doc.ID} file={recordingFile} seek={playAt} />}
-      {podcastOpen && <PodcastPlayer documentId={doc.ID} />}
+      {bilingualOpen && !studySet && (
+        <div className="panel-in">
+          <BilingualPanel doc={doc} />
+        </div>
+      )}
+      {checklistOpen && doc.hasContent && (
+        <div className="panel-in">
+          <ChecklistPanel doc={doc} />
+        </div>
+      )}
+      {textOpen && doc.hasContent && !recordingFile && (
+        <div className="panel-in">
+          <OriginalText documentId={doc.ID} transcript={transcript} />
+        </div>
+      )}
+      {recordingOpen && recordingFile && (
+        <div className="panel-in">
+          <RecordingPanel documentId={doc.ID} file={recordingFile} seek={playAt} />
+        </div>
+      )}
+      {podcastOpen && (
+        <div className="panel-in">
+          <PodcastPlayer documentId={doc.ID} />
+        </div>
+      )}
       {mapOpen && !studySet && (
-        <MindMap doc={doc} files={pdfFiles} onOpenDocument={(file, passage) => setViewing({ file, page: passage.page ?? 1, passage: passage.text })} />
+        <div className="panel-in">
+          <MindMap doc={doc} files={pdfFiles} onOpenDocument={(file, passage) => setViewing({ file, page: passage.page ?? 1, passage: passage.text })} />
+        </div>
       )}
-      {chatOpen && <DocumentChat documentId={doc.ID} files={pdfFiles} prefill={prefill} onPlayAt={recordingFile ? playFrom : undefined} />}
-      {studyOpen && <StudyPanel documentId={doc.ID} title={doc.Filename} autoStart={openStudy} />}
+      {chatOpen && (
+        <div className="panel-in">
+          <DocumentChat documentId={doc.ID} files={pdfFiles} prefill={prefill} onPlayAt={recordingFile ? playFrom : undefined} />
+        </div>
+      )}
+      {studyOpen && (
+        <div className="panel-in">
+          <StudyPanel documentId={doc.ID} title={doc.Filename} autoStart={openStudy} />
+        </div>
+      )}
 
       {viewing && (
         <PdfViewer

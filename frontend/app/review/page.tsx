@@ -127,8 +127,10 @@ export default function ReviewPage() {
             className="block min-h-52 w-full rounded-2xl border border-ink/30 bg-surface p-6 text-center text-xl shadow-sm hover:bg-ink/5"
             data-testid="review-card"
           >
-            <span className="block text-xs font-semibold uppercase tracking-widest text-ink/70">{flipped ? t("study.answer") : t("study.question")}</span>
-            <span className="mt-2 block">{flipped ? card.back : card.front}</span>
+            <span key={`${card.front}-${flipped}`} className="flip-in block">
+              <span className="block text-xs font-semibold uppercase tracking-widest text-ink/70">{flipped ? t("study.answer") : t("study.question")}</span>
+              <span className="mt-2 block">{flipped ? card.back : card.front}</span>
+            </span>
             {/* Named by the words on the card, with what pressing it does added after (see StudyPanel) */}
             <span className="sr-only">{flipped ? t("study.showQuestion") : t("study.showAnswer")}</span>
           </button>

@@ -150,8 +150,11 @@ function Flashcards({ cards, title, documentId }: { cards: StudyCard[]; title: s
         className="block min-h-44 w-full rounded-2xl border border-ink/30 bg-surface p-6 text-center text-xl shadow-sm hover:bg-ink/5"
         data-testid="flashcard"
       >
-        <span className="block text-xs font-semibold uppercase tracking-widest text-ink/70">{flipped ? t("study.answer") : t("study.question")}</span>
-        <span className="mt-2 block">{flipped ? card.back : card.front}</span>
+        {/* Keyed by the side that is showing, so turning the card gives the words a small turn of their own. */}
+        <span key={`${position}-${flipped}`} className="flip-in block">
+          <span className="block text-xs font-semibold uppercase tracking-widest text-ink/70">{flipped ? t("study.answer") : t("study.question")}</span>
+          <span className="mt-2 block">{flipped ? card.back : card.front}</span>
+        </span>
         {/* The button is named by what is written on it (the card), and what pressing it does is added after: a label that replaced
             the card's words would hide the question from a screen reader, and from someone who says the words they see. */}
         <span className="sr-only">{flipped ? t("study.showQuestion") : t("study.showAnswer")}</span>

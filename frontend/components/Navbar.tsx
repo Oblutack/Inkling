@@ -88,7 +88,7 @@ export default function Navbar() {
       </nav>
 
       {open && (
-        <div id="mobile-menu" className="border-t border-ink/15 px-4 pb-4 pt-2 lg:hidden">
+        <div id="mobile-menu" className="panel-in border-t border-ink/15 px-4 pb-4 pt-2 lg:hidden">
           <div className="flex flex-col gap-1 [&>*]:py-3">{links}</div>
           <div className="mt-2 flex items-center gap-2 border-t border-ink/15 pt-3">
             <ThemeToggle />
