@@ -239,7 +239,7 @@ export default function ChatPanel({
             </ul>
           )}
           {messages.map((m, i) => (
-            <div key={i} className={m.role === "user" ? "ml-auto w-fit max-w-[90%] rounded-2xl rounded-br-sm bg-ink/10 px-4 py-2" : "reading max-w-[95%] border-l-2 border-accent/60 pl-4 text-base"}>
+            <div key={i} className={`rise-sm ${m.role === "user" ? "ml-auto w-fit max-w-[90%] rounded-2xl rounded-br-sm bg-ink/10 px-4 py-2" : "reading max-w-[95%] border-l-2 border-accent/60 pl-4 text-base"}`}>
               <p className="mb-0.5 font-sans text-xs font-semibold uppercase tracking-widest text-ink/70">
                 {m.role === "user" ? t("chat.you") : assistantLabel}
               </p>
@@ -284,7 +284,17 @@ export default function ChatPanel({
               )}
             </div>
           ))}
-          {isSending && <p className="text-sm font-medium text-ink/70">{t("chat.thinking")}</p>}
+          {isSending && (
+            <p className="rise-sm text-sm font-medium text-ink/70">
+              {/* The label's own dots are replaced by three that breathe. */}
+              {t("chat.thinking").replace(/[.…]+$/, "")}
+              <span className="dots ml-0.5" aria-hidden="true">
+                <span style={{ "--i": 0 } as React.CSSProperties}>.</span>
+                <span style={{ "--i": 1 } as React.CSSProperties}>.</span>
+                <span style={{ "--i": 2 } as React.CSSProperties}>.</span>
+              </span>
+            </p>
+          )}
           <div ref={bottomRef} />
         </div>
 

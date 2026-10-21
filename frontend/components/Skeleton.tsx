@@ -4,7 +4,7 @@ import { useT } from "./I18nProvider";
 // Grey placeholder shapes shown while something loads, so the page does not jump or look empty.
 
 export function SkeletonLine({ className = "" }: { className?: string }) {
-  return <div className={`h-4 rounded bg-ink/10 animate-pulse ${className}`} aria-hidden="true" />;
+  return <div className={`shimmer h-4 rounded bg-ink/10 ${className}`} aria-hidden="true" />;
 }
 
 // Stands in for a saved summary while the list loads.

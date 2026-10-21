@@ -237,11 +237,12 @@ export default function MindMap({ doc, files, onOpenDocument }: MindMapProps) {
           <g fill="none" className="stroke-ink/40" strokeWidth={1.5}>
             {layout.nodes
               .filter((n) => n.parent !== null)
-              .map((n) => (
-                <path key={n.node.id} d={edgePath(layout.nodes[n.parent as number], n)} />
+              .map((n, i) => (
+                // Drawn from the parent to the child, one after the other (the delay stops growing after a while, so a big map is quick too).
+                <path key={n.node.id} d={edgePath(layout.nodes[n.parent as number], n)} pathLength={1} className="draw" style={{ "--i": Math.min(i, 16) } as React.CSSProperties} />
               ))}
           </g>
-          {layout.nodes.map((n) => {
+          {layout.nodes.map((n, index) => {
             const root = n.node.kind === "root";
             const branch = n.node.kind === "branch";
             const isSelected = selected?.node.id === n.node.id;
@@ -254,7 +255,8 @@ export default function MindMap({ doc, files, onOpenDocument }: MindMapProps) {
                 aria-describedby={n.lines.join(" ") !== n.node.text ? `map-full-${n.node.id}` : undefined}
                 data-testid="map-node"
                 data-kind={n.node.kind}
-                className="cursor-pointer outline-none [&:focus-visible>rect]:stroke-[3]"
+                className="pop cursor-pointer outline-none [transform-box:fill-box] [transform-origin:center] [&:focus-visible>rect]:stroke-[3]"
+                style={{ "--i": Math.min(index, 16), "--wait": "120ms" } as React.CSSProperties}
                 onClick={() => choose(n)}
                 onFocus={() => reveal(n)}
                 onKeyDown={(e) => {
