@@ -2,7 +2,7 @@ module ai-summarizer/go-api
 
 go 1.26.0
 
-toolchain go1.26.9
+toolchain go1.26.10
 
 require (
 	github.com/getsentry/sentry-go v0.49.0
