@@ -212,4 +212,111 @@ test.describe("exam mode", () => {
     await expect(page.getByTestId("exam-history")).toBeVisible();
     expect((await new AxeBuilder({ page }).withTags(tags).analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
+
+  test("a past exam is listed, opened again with every question and answer, and its misses can be practised", async ({ page }) => {
+    await newSignedInUser(page);
+    await makeSet(page, "alpha", { quiz: true, tag: "course" });
+    await startCollection(page, "course");
+    // one right, one wrong, one left alone
+    await answer(page, true);
+    await next(page).click();
+    await answer(page, false);
+    await next(page).click();
+    await page.getByRole("button", { name: "Finish the exam" }).click();
+    await page.getByRole("button", { name: "Finish anyway" }).click();
+    await expect(page.getByTestId("exam-score")).toHaveText("1 of 3 correct (33%)");
+
+    // it is on the exam page afterwards, with the collection, the score and the time
+    await page.goto("/exam");
+    const past = page.getByTestId("exam-past");
+    await expect(past.getByTestId("exam-past-item")).toHaveCount(1);
+    await expect(past).toContainText("Collection “course”");
+    await expect(past).toContainText("1 of 3 (33%)");
+    expect((await new AxeBuilder({ page }).withTags(tags).analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+
+    // opening it shows the result again, with the questions that were missed and what was chosen
+    await past.getByRole("button", { name: /^Open the exam of/ }).click();
+    await expect(page.getByRole("heading", { name: /^Your exam of/ })).toBeVisible();
+    await expect(page.getByTestId("exam-score")).toHaveText("1 of 3 correct (33%)");
+    await expect(page.getByTestId("exam-missed-item")).toHaveCount(2);
+    await expect(page.getByTestId("exam-missed")).toContainText("Not answered");
+    await expect(page.getByTestId("exam-missed")).toContainText("Right answer:");
+    await expect(page.getByTestId("exam-history")).toHaveCount(0);
+    expect((await new AxeBuilder({ page }).withTags(tags).analyze()).violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+
+    // and the misses can be practised from there; a practice run is not added to the list
+    await page.getByRole("button", { name: "Practise the missed ones" }).click();
+    await expect(page.getByTestId("exam-position")).toHaveText("Question 1 of 2");
+    await answer(page, true);
+    await next(page).click();
+    await answer(page, true);
+    await page.getByRole("button", { name: "Finish the exam" }).click();
+    await expect(page.getByTestId("exam-score")).toHaveText("2 of 2 correct (100%)");
+    await page.goto("/exam");
+    await expect(page.getByTestId("exam-past").getByTestId("exam-past-item")).toHaveCount(1);
+  });
+
+  test("an exam kept before its questions were still opens, with the score and the questions that were missed", async ({ page }) => {
+    await newSignedInUser(page);
+    const id = await makeSet(page, "alpha", { quiz: true, tag: "course" });
+    const kept = await page.request.post(`${API}/exams/results`, {
+      data: {
+        tag: "course",
+        documentIds: [id],
+        questions: 3,
+        correct: 1,
+        seconds: 75,
+        breakdown: [{ documentId: id, title: "alpha", questions: 3, correct: 1 }],
+        missed: [{ documentId: id, question: "An older question?" }],
+      },
+      headers: origin,
+    });
+    expect(kept.status()).toBe(201);
+
+    await page.goto("/exam");
+    await page.getByTestId("exam-past").getByRole("button", { name: /^Open the exam of/ }).click();
+    await expect(page.getByTestId("exam-score")).toHaveText("1 of 3 correct (33%)");
+    await expect(page.getByText("taken before the questions were kept")).toBeVisible();
+    await expect(page.getByTestId("exam-missed")).toContainText("An older question?");
+    // there is nothing to say about the answers, and nothing to practise on
+    await expect(page.getByTestId("exam-missed")).not.toContainText("Right answer:");
+    await expect(page.getByRole("button", { name: "Practise the missed ones" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Back to the exams" }).click();
+    await expect(page.getByTestId("exam-past")).toBeVisible();
+  });
+
+  test("a past exam is deleted after a second look, and only that one", async ({ page }) => {
+    await newSignedInUser(page);
+    const id = await makeSet(page, "alpha", { quiz: true, tag: "course" });
+    for (const correct of [1, 2]) {
+      const kept = await page.request.post(`${API}/exams/results`, {
+        data: {
+          tag: "course",
+          documentIds: [id],
+          questions: 3,
+          correct,
+          seconds: 60,
+          breakdown: [{ documentId: id, title: "alpha", questions: 3, correct }],
+          missed: [],
+        },
+        headers: origin,
+      });
+      expect(kept.status()).toBe(201);
+    }
+    await page.goto("/exam");
+    const items = page.getByTestId("exam-past").getByTestId("exam-past-item");
+    await expect(items).toHaveCount(2);
+
+    // newest first: the one with 2 right; asking to delete it only asks
+    await items.first().getByRole("button", { name: /^Delete the exam of/ }).click();
+    await expect(items).toHaveCount(2);
+    await items.first().getByRole("button", { name: "Cancel" }).click();
+    await expect(items).toHaveCount(2);
+    await items.first().getByRole("button", { name: /^Delete the exam of/ }).click();
+    await items.first().getByRole("button", { name: "Yes, delete" }).click();
+    await expect(items).toHaveCount(1);
+    await expect(items.first()).toContainText("1 of 3 (33%)");
+    const left = await (await page.request.get(`${API}/exams/results`)).json();
+    expect(left.results).toHaveLength(1);
+  });
 });

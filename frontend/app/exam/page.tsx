@@ -15,6 +15,7 @@ import {
   formatClock,
   mark,
   percentOf,
+  reopened,
   resultBody,
   setsOfCollection,
   timeLimit,
@@ -24,6 +25,7 @@ import {
   type ExamRecord,
   type ExamSet,
   type Marked,
+  type PastExam,
 } from "../../lib/exam";
 import PageTitle from "../../components/PageTitle";
 import DrawnCheck from "../../components/DrawnCheck";
@@ -51,7 +53,11 @@ interface Finished {
   practice: boolean;
   tag: string;
   documentIds: number[];
+  // Set when this is an exam from the past that has been opened again (and whether all of its questions were kept).
+  past?: { id: number; finishedAt: string; complete: boolean };
 }
+
+const PAST_PAGE = 30;
 
 const LETTERS = ["A", "B", "C", "D"];
 
@@ -81,6 +87,12 @@ export default function ExamPage() {
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [finished, setFinished] = useState<Finished | null>(null);
   const [history, setHistory] = useState<ExamRecord[]>([]);
+  // The exams taken before, newest first: shown on the setup screen, where one can be opened again or deleted.
+  const [past, setPast] = useState<ExamRecord[]>([]);
+  const [pastMore, setPastMore] = useState(false);
+  const [pastError, setPastError] = useState("");
+  const [opening, setOpening] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
   const [saveError, setSaveError] = useState("");
   const [announcement, setAnnouncement] = useState("");
 
@@ -104,6 +116,65 @@ export default function ExamPage() {
   useEffect(() => {
     if (user) void loadSets();
   }, [user, loadSets]);
+
+  const loadPast = useCallback(
+    async (offset = 0) => {
+      setPastError("");
+      try {
+        const response = await axios.get<{ results: ExamRecord[] }>(`${API_URL}/exams/results`, { params: { limit: PAST_PAGE, offset } });
+        const page = response.data.results;
+        setPast((current) => (offset === 0 ? page : [...current, ...page]));
+        setPastMore(page.length === PAST_PAGE);
+      } catch (err) {
+        setPastError(apiError(err, t("exam.pastLoadFailed")));
+      }
+    },
+    [t]
+  );
+
+  useEffect(() => {
+    if (user) void loadPast();
+  }, [user, loadPast]);
+
+  // Opens an exam from the past: laid out like a result that has just been marked, to be looked through again.
+  const openPast = async (id: number) => {
+    setOpening(id);
+    setPastError("");
+    try {
+      const response = await axios.get<{ result: PastExam }>(`${API_URL}/exams/results/${id}`);
+      const exam = response.data.result;
+      const { marked, complete } = reopened(exam);
+      const documentIds = [...new Set(exam.detail ? exam.detail.map((d) => d.documentId) : exam.breakdown.map((b) => b.documentId))];
+      setHistory([]);
+      setSaveError("");
+      setFinished({
+        marked,
+        seconds: exam.seconds,
+        timeUp: false,
+        practice: false,
+        tag: exam.tag,
+        documentIds,
+        past: { id: exam.id, finishedAt: exam.finishedAt, complete },
+      });
+      setPhase("results");
+    } catch (err) {
+      setPastError(apiError(err, t("exam.openFailed")));
+    } finally {
+      setOpening(null);
+    }
+  };
+
+  const deletePast = async (id: number) => {
+    setPastError("");
+    try {
+      await axios.delete(`${API_URL}/exams/results/${id}`);
+      setPast((current) => current.filter((h) => h.id !== id));
+    } catch (err) {
+      setPastError(apiError(err, t("exam.deleteFailed")));
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   const collections = useMemo(() => collectionsOf(sets ?? []), [sets]);
   const chosen: { tag: string; documentIds: number[] } | null =
@@ -201,7 +272,8 @@ export default function ExamPage() {
       setSaveError("");
       if (current.practice) return;
       try {
-        await axios.post(`${API_URL}/exams/results`, resultBody(current.tag, current.documentIds, marked, spent));
+        await axios.post(`${API_URL}/exams/results`, resultBody(current.tag, current.documentIds, marked, spent, current.questions, current.answers));
+        void loadPast();
       } catch (err) {
         setSaveError(apiError(err, t("exam.saveFailed")));
       }
@@ -212,7 +284,7 @@ export default function ExamPage() {
         setHistory([]);
       }
     },
-    [t]
+    [t, loadPast]
   );
 
   // The clock: one tick a second while an exam is open. When a time limit runs out the exam is marked as it stands.
@@ -424,6 +496,70 @@ export default function ExamPage() {
               </div>
             </form>
           )}
+
+          {(past.length > 0 || pastError) && (
+            <section className="card mt-6" aria-labelledby="exam-past" data-testid="exam-past">
+              <h2 id="exam-past" className="text-xl">
+                {t("exam.pastTitle")}
+              </h2>
+              {past.length > 0 && (
+                <div className="mt-3 flex h-16 items-end gap-1" aria-hidden="true">
+                  {trend(past.slice(0, 15)).map((percent, i) => (
+                    <div key={i} className="w-4 rounded-t bg-accent/70" style={{ height: `${Math.max(4, percent)}%` }} />
+                  ))}
+                </div>
+              )}
+              <ul className="mt-3 divide-y divide-ink/15">
+                {past.map((h) => {
+                  const when = dateOf(h.finishedAt);
+                  return (
+                    <li key={h.id} className="flex flex-wrap items-center justify-between gap-2 py-2" data-testid="exam-past-item">
+                      <span className="text-sm">
+                        <span className="block font-medium">{h.tag ? t("exam.pastCollection", { tag: h.tag }) : t("exam.pastSets", { n: h.sets ?? 1 })}</span>
+                        {t("exam.historyRow", {
+                          when,
+                          correct: h.correct,
+                          questions: h.questions,
+                          percent: percentOf(h.correct, h.questions),
+                          time: formatClock(h.seconds),
+                        })}
+                      </span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <button type="button" onClick={() => void openPast(h.id)} disabled={opening !== null} className={actionButton} aria-label={t("exam.openExam", { when })}>
+                          {t("exam.open")}
+                        </button>
+                        {deleting === h.id ? (
+                          <>
+                            <span className="text-sm font-medium">{t("exam.deleteConfirm")}</span>
+                            <button type="button" onClick={() => void deletePast(h.id)} className="btn btn-danger btn-sm">
+                              {t("exam.deleteYes")}
+                            </button>
+                            <button type="button" onClick={() => setDeleting(null)} className={actionButton}>
+                              {t("common.cancel")}
+                            </button>
+                          </>
+                        ) : (
+                          <button type="button" onClick={() => setDeleting(h.id)} className={actionButton} aria-label={t("exam.deleteExam", { when })}>
+                            {t("exam.delete")}
+                          </button>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {pastMore && (
+                <button type="button" onClick={() => void loadPast(past.length)} className={`${actionButton} mt-3`}>
+                  {t("exam.showMore")}
+                </button>
+              )}
+              {pastError && (
+                <p className="mt-3 text-sm font-medium text-danger" role="alert">
+                  {pastError}
+                </p>
+              )}
+            </section>
+          )}
         </>
       )}
 
@@ -521,18 +657,21 @@ export default function ExamPage() {
       {phase === "results" && finished && (
         <div className="space-y-6" data-testid="exam-results">
           <div className="card text-center">
-            <DrawnCheck className="mb-3" />
+            {!finished.past && <DrawnCheck className="mb-3" />}
             {finished.timeUp && (
               <p className="mb-2 font-medium" role="status">
                 {t("exam.timeUp")}
               </p>
             )}
-            <h2 className="text-2xl">{finished.practice ? t("exam.practiceResult") : t("exam.resultsTitle")}</h2>
+            <h2 className="text-2xl">
+              {finished.past ? t("exam.pastResult", { when: dateOf(finished.past.finishedAt) }) : finished.practice ? t("exam.practiceResult") : t("exam.resultsTitle")}
+            </h2>
             <p className="mt-3 text-3xl font-semibold" data-testid="exam-score">
               {t("exam.score", { correct: finished.marked.correct, total: finished.marked.total, percent: finished.marked.percent })}
             </p>
             <p className="muted mt-1">{t("exam.timeTaken", { time: formatClock(finished.seconds) })}</p>
             {finished.practice && <p className="muted mt-1 text-sm">{t("exam.practiceNote")}</p>}
+            {finished.past && !finished.past.complete && <p className="muted mt-2 text-sm">{t("exam.pastLimited")}</p>}
             {saveError && (
               <p className="mt-2 text-sm font-medium text-danger" role="alert">
                 {saveError}
@@ -567,14 +706,18 @@ export default function ExamPage() {
                 {finished.marked.missed.map((m, i) => (
                   <li key={i} className="rounded-xl border border-ink/20 p-3" data-testid="exam-missed-item">
                     <p className="font-semibold">{m.question.question}</p>
-                    <p className="mt-2 text-sm">
-                      <span className="font-medium">{t("exam.yourAnswer")}:</span>{" "}
-                      {m.chosen === null ? t("exam.noAnswer") : `${LETTERS[m.chosen]}. ${m.question.options[m.chosen]}`}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">{t("exam.rightAnswer")}:</span> {LETTERS[m.question.answer]}. {m.question.options[m.question.answer]}
-                    </p>
-                    {m.question.explanation && <p className="muted mt-1 text-sm">{m.question.explanation}</p>}
+                    {m.question.options.length > 0 && (
+                      <>
+                        <p className="mt-2 text-sm">
+                          <span className="font-medium">{t("exam.yourAnswer")}:</span>{" "}
+                          {m.chosen === null ? t("exam.noAnswer") : `${LETTERS[m.chosen]}. ${m.question.options[m.chosen]}`}
+                        </p>
+                        <p className="text-sm">
+                          <span className="font-medium">{t("exam.rightAnswer")}:</span> {LETTERS[m.question.answer]}. {m.question.options[m.question.answer]}
+                        </p>
+                        {m.question.explanation && <p className="muted mt-1 text-sm">{m.question.explanation}</p>}
+                      </>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -608,13 +751,13 @@ export default function ExamPage() {
           )}
 
           <div className="flex flex-wrap justify-center gap-3">
-            {finished.marked.missed.length > 0 && (
+            {finished.marked.missed.length > 0 && (!finished.past || finished.past.complete) && (
               <button type="button" onClick={practiseMissed} className="btn btn-primary">
                 {t("exam.practise")}
               </button>
             )}
             <button type="button" onClick={newExam} className="btn btn-secondary">
-              {t("exam.again")}
+              {finished.past ? t("exam.backToExams") : t("exam.again")}
             </button>
             <Link href="/dashboard" className="btn btn-secondary">
               {t("review.library")}
