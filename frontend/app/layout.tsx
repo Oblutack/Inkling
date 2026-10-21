@@ -5,6 +5,7 @@ import "@fontsource-variable/source-serif-4";
 import "./globals.css";
 import { THEME_SCRIPT } from "../lib/theme";
 import Footer from "../components/Footer";
+import MotionReady from "../components/MotionReady";
 import Navbar from "../components/Navbar";
 import Providers from "../components/Providers";
 import RegisterServiceWorker from "../components/RegisterServiceWorker";
@@ -42,6 +43,7 @@ export default async function RootLayout({
       </head>
       <body className="flex min-h-screen flex-col bg-canvas font-sans text-ink">
         <RegisterServiceWorker />
+        <MotionReady />
         <Providers nonce={nonce}>
           <SkipLink />
           <Navbar />

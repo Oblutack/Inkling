@@ -11,6 +11,7 @@ import TurnstileWidget, { turnstileEnabled } from "../../components/Turnstile";
 import { ErrorText, Field, PrimaryButton } from "../../components/ui";
 import { API_URL, TURNSTILE_HEADER, apiError } from "../../lib/api";
 import { useT } from "../../components/I18nProvider";
+import DrawnCheck from "../../components/DrawnCheck";
 
 export default function SignupPage() {
   const t = useT();
@@ -61,6 +62,7 @@ export default function SignupPage() {
     return (
       <FormContainer title={t("signup.checkTitle")}>
         <div className="space-y-5 text-center">
+          <DrawnCheck />
           <p>
             {t("signup.sentBefore")}
             <strong>{email}</strong>
@@ -107,7 +109,7 @@ export default function SignupPage() {
         <TurnstileWidget onToken={setHumanToken} resetKey={humanReset} />
         <ErrorText>{error}</ErrorText>
 
-        <PrimaryButton className="w-full text-lg" type="submit" disabled={submitting || (turnstileEnabled && !humanToken)}>
+        <PrimaryButton className="btn-glint-once w-full text-lg" type="submit" disabled={submitting || (turnstileEnabled && !humanToken)}>
           {submitting ? t("signup.creating") : t("signup.title")}
         </PrimaryButton>
       </form>

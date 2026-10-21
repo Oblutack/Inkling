@@ -5,6 +5,7 @@ import axios from "axios";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import FormContainer from "../../components/FormContainer";
+import DrawnCheck from "../../components/DrawnCheck";
 import { ErrorText, Field, PrimaryButton } from "../../components/ui";
 import { API_URL, apiError } from "../../lib/api";
 import { useT } from "../../components/I18nProvider";
@@ -54,6 +55,7 @@ function ResetPasswordForm() {
     return (
       <FormContainer title={t("reset.doneTitle")}>
         <div className="space-y-5 text-center">
+          <DrawnCheck />
           <p>{t("reset.done")}</p>
           <Link
             href="/login"
@@ -91,7 +93,7 @@ function ResetPasswordForm() {
           maxLength={72}
         />
         <ErrorText>{error}</ErrorText>
-        <PrimaryButton className="w-full text-lg" type="submit" disabled={submitting}>
+        <PrimaryButton className="btn-glint-once w-full text-lg" type="submit" disabled={submitting}>
           {submitting ? t("reset.saving") : t("reset.save")}
         </PrimaryButton>
       </form>

@@ -178,7 +178,7 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          className="btn btn-primary w-full text-lg"
+          className="btn btn-primary btn-glint-once w-full text-lg"
         >
           {t("login.submit")}
         </button>

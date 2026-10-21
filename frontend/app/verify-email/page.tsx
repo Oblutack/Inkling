@@ -5,6 +5,7 @@ import axios from "axios";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import FormContainer from "../../components/FormContainer";
+import DrawnCheck from "../../components/DrawnCheck";
 import { useAuth } from "../../contexts/AuthContext";
 import { API_URL, apiError } from "../../lib/api";
 import { useT } from "../../components/I18nProvider";
@@ -46,6 +47,7 @@ function VerifyEmail() {
   return (
     <FormContainer title={status === "ok" ? t("confirm.doneTitle") : t("confirm.title")}>
       <div className="space-y-5 text-center">
+        {status === "ok" && <DrawnCheck />}
         {status === "checking" && <p>{t("confirm.checking")}</p>}
         {status !== "checking" && <p role={status === "failed" ? "alert" : "status"}>{message}</p>}
         {status === "failed" && (

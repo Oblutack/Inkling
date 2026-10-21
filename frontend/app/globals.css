@@ -431,12 +431,23 @@ body::before {
   border-radius: 9999px;
   pointer-events: none;
   background: radial-gradient(closest-side, rgb(var(--accent) / 0.2), transparent);
+  opacity: 0;
 }
-.glow-a {
-  animation: fade-in 2.2s ease-out 0.9s backwards, drift-a 16s ease-in-out infinite alternate;
+/* They begin once the page is drawn and idle ("motion-ready", set by components/MotionReady.tsx). People who ask for less motion
+   see them, still. */
+.motion-ready .glow {
+  opacity: 1;
 }
-.glow-b {
-  animation: fade-in 2.2s ease-out 1.2s backwards, drift-b 20s ease-in-out infinite alternate;
+.motion-ready .glow-a {
+  animation: fade-in 2.2s ease-out 0.1s backwards, drift-a 16s ease-in-out infinite alternate;
+}
+.motion-ready .glow-b {
+  animation: fade-in 2.2s ease-out 0.4s backwards, drift-b 20s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow {
+    opacity: 1;
+  }
 }
 /* A short stroke of ink under the headline, drawn from left to right. */
 .ink-rule {
@@ -500,6 +511,61 @@ body::before {
   .marquee:hover .marquee-track {
     animation-play-state: paused;
   }
+}
+
+/* The same touches, quieter, for the rest of the site. A short stroke of ink under a page title (centred on the sign-in pages), a
+   rule that draws itself under a section title when the section arrives, one light across a button when a form opens (once, not
+   for ever: nobody should be watching a button while they type), and a mark that draws itself when something has been done. */
+.ink-rule-center {
+  margin-inline: auto;
+  transform-origin: center;
+}
+.rule {
+  display: block;
+  height: 3px;
+  width: 4rem;
+  border-radius: 9999px;
+  background: rgb(var(--accent));
+  transform-origin: left center;
+}
+.reveal-hidden .rule {
+  transform: scaleX(0);
+}
+.reveal-hidden.reveal-in .rule {
+  transform: none;
+  transition: transform 0.8s var(--ease-out) 0.25s;
+}
+@keyframes glint-once {
+  from {
+    transform: translateX(-130%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(260%) skewX(-18deg);
+  }
+}
+.btn-glint-once {
+  position: relative;
+  overflow: hidden;
+}
+.btn-glint-once::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(var(--accent-fg) / 0.35), transparent);
+  transform: translateX(-130%) skewX(-18deg);
+  pointer-events: none;
+}
+.motion-ready .btn-glint-once::after {
+  animation: glint-once 1.1s ease-out 1.2s 1 backwards;
+}
+/* The soft patches behind a sign-in page: fixed to the window, so they can never make the page wider. */
+.glow-layer {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
 }
 
 /* The feature cards lift a little when a pointer is over them. (The separate "translate" property is used so that it never

@@ -1,12 +1,8 @@
 "use client";
 import { useEffect } from "react";
 
-// The motion of the front page that needs a script, started once the page has been drawn (the styles are in globals.css):
-//
-// 1. The class "motion-ready" on the page, which switches on the decorations that only need to run, not to be there at the first
-//    drawing (the light across the main button, the line reading down the picture, the floating of the picture).
-// 2. Parts marked with the class "reveal" that ease in whenever they are scrolled into view, and go back to waiting when they are
-//    scrolled out of it, so they play again as the page is scrolled up and down.
+// Parts of the front page marked with the class "reveal" ease in whenever they are scrolled into view, and go back to waiting when
+// they are scrolled out of it, so they play again as the page is scrolled up and down (the styles are in globals.css).
 //
 // Nothing is held back from anyone: the server sends every part fully visible, so without this script, and for people who ask for
 // less motion, the page is simply complete from the start.
@@ -18,7 +14,6 @@ export default function LandingMotion() {
     // callback, so a short wait stands in).
     let undo: (() => void) | undefined;
     const start = () => {
-      document.documentElement.classList.add("motion-ready");
       undo = watchParts();
     };
     const hasIdle = typeof window.requestIdleCallback === "function";
@@ -26,7 +21,6 @@ export default function LandingMotion() {
     return () => {
       if (hasIdle) window.cancelIdleCallback(handle);
       else window.clearTimeout(handle);
-      document.documentElement.classList.remove("motion-ready");
       undo?.();
     };
   }, []);

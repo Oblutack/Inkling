@@ -56,7 +56,7 @@ export default function ForgotPasswordPage() {
         <SuccessText>{message}</SuccessText>
         <ErrorText>{error}</ErrorText>
 
-        <PrimaryButton className="w-full text-lg" type="submit" disabled={submitting || (turnstileEnabled && !humanToken)}>
+        <PrimaryButton className="btn-glint-once w-full text-lg" type="submit" disabled={submitting || (turnstileEnabled && !humanToken)}>
           {submitting ? t("forgot.sending") : t("forgot.send")}
         </PrimaryButton>
         <Link href="/login" className="btn btn-quiet self-center underline">
