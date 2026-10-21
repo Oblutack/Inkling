@@ -731,7 +731,7 @@ export const fr: Record<MessageKey, string> = {
   "dates.verified": "Vérifié : la date figure dans cette phrase",
   "dates.unverified": "N’a pas pu être confirmé. Vérifiez la phrase vous-même.",
   "dates.add": "Ajouter au calendrier",
-  "dates.addOne": "Ajouter « {what} » à votre calendrier",
+  "dates.addOne": "Ajouter au calendrier : « {what} »",
   "dates.addAll": "Ajouter les {n} à votre calendrier",
   "dates.reminder": "Me le rappeler",
   "dates.reminderNone": "Aucun rappel",

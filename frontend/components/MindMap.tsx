@@ -251,7 +251,7 @@ export default function MindMap({ doc, files, onOpenDocument }: MindMapProps) {
                 role="button"
                 tabIndex={0}
                 aria-pressed={isSelected}
-                aria-label={n.node.text}
+                aria-describedby={n.lines.join(" ") !== n.node.text ? `map-full-${n.node.id}` : undefined}
                 data-testid="map-node"
                 data-kind={n.node.kind}
                 className="cursor-pointer outline-none [&:focus-visible>rect]:stroke-[3]"
@@ -281,11 +281,14 @@ export default function MindMap({ doc, files, onOpenDocument }: MindMapProps) {
                     fontSize={14}
                     fontWeight={root || branch ? 600 : 400}
                     className={root ? "fill-accent-fg" : "fill-ink"}
-                    aria-hidden="true"
                   >
+                    {/* The button is named by the words drawn on it (a space ends each line, so the lines read as one sentence).
+                        Where the drawn words are cut short, the whole text is its description. */}
                     {line}
+                    {i < n.lines.length - 1 ? " " : ""}
                   </text>
                 ))}
+                {n.lines.join(" ") !== n.node.text && <desc id={`map-full-${n.node.id}`}>{n.node.text}</desc>}
               </g>
             );
           })}

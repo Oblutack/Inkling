@@ -124,12 +124,13 @@ export default function ReviewPage() {
           <button
             type="button"
             onClick={() => setFlipped((f) => !f)}
-            aria-label={flipped ? t("study.showQuestion") : t("study.showAnswer")}
             className="block min-h-52 w-full rounded-2xl border border-ink/30 bg-surface p-6 text-center text-xl shadow-sm hover:bg-ink/5"
             data-testid="review-card"
           >
             <span className="block text-xs font-semibold uppercase tracking-widest text-ink/70">{flipped ? t("study.answer") : t("study.question")}</span>
             <span className="mt-2 block">{flipped ? card.back : card.front}</span>
+            {/* Named by the words on the card, with what pressing it does added after (see StudyPanel) */}
+            <span className="sr-only">{flipped ? t("study.showQuestion") : t("study.showAnswer")}</span>
           </button>
           <div className="mt-4 flex min-h-12 flex-wrap items-center justify-center gap-3">
             {flipped ? (

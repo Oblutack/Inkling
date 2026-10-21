@@ -58,9 +58,9 @@ test.describe("dates and deadlines", () => {
     await expect(items.nth(1)).toContainText("✓ Checked: the date is in this sentence");
     await expect(items.nth(0)).toContainText("⚠ Could not be confirmed");
     // only what checks out can be added to a calendar
-    await expect(items.nth(1).getByRole("button", { name: /Add .* to your calendar/ })).toBeVisible();
-    await expect(items.nth(0).getByRole("button", { name: /Add .* to your calendar/ })).toHaveCount(0);
-    await expect(items.nth(2).getByRole("button", { name: /Add .* to your calendar/ })).toHaveCount(0);
+    await expect(items.nth(1).getByRole("button", { name: /^Add to calendar: / })).toBeVisible();
+    await expect(items.nth(0).getByRole("button", { name: /^Add to calendar: / })).toHaveCount(0);
+    await expect(items.nth(2).getByRole("button", { name: /^Add to calendar: / })).toHaveCount(0);
   });
 
   test("the dates that check out are saved as a calendar file, with the reminder chosen", async ({ page }) => {
@@ -84,7 +84,7 @@ test.describe("dates and deadlines", () => {
     const plain = await downloaded(page, () => panel.getByRole("button", { name: "Add all 1 to your calendar" }).click());
     expect(plain.text).not.toContain("VALARM");
 
-    const one = await downloaded(page, () => panel.getByTestId("date-item").nth(1).getByRole("button", { name: /Add .* to your calendar/ }).click());
+    const one = await downloaded(page, () => panel.getByTestId("date-item").nth(1).getByRole("button", { name: /^Add to calendar: / }).click());
     expect(one.text.match(/BEGIN:VEVENT/g)).toHaveLength(1);
   });
 

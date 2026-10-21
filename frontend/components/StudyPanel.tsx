@@ -147,12 +147,14 @@ function Flashcards({ cards, title, documentId }: { cards: StudyCard[]; title: s
       <button
         type="button"
         onClick={() => setFlipped((f) => !f)}
-        aria-label={flipped ? t("study.showQuestion") : t("study.showAnswer")}
         className="block min-h-44 w-full rounded-2xl border border-ink/30 bg-surface p-6 text-center text-xl shadow-sm hover:bg-ink/5"
         data-testid="flashcard"
       >
         <span className="block text-xs font-semibold uppercase tracking-widest text-ink/70">{flipped ? t("study.answer") : t("study.question")}</span>
         <span className="mt-2 block">{flipped ? card.back : card.front}</span>
+        {/* The button is named by what is written on it (the card), and what pressing it does is added after: a label that replaced
+            the card's words would hide the question from a screen reader, and from someone who says the words they see. */}
+        <span className="sr-only">{flipped ? t("study.showQuestion") : t("study.showAnswer")}</span>
       </button>
       <p className="muted mt-2 text-sm" data-testid="card-status">
         {!known

@@ -729,7 +729,7 @@ export const en = {
   "dates.verified": "Checked: the date is in this sentence",
   "dates.unverified": "Could not be confirmed. Check the sentence yourself.",
   "dates.add": "Add to calendar",
-  "dates.addOne": "Add “{what}” to your calendar",
+  "dates.addOne": "Add to calendar: “{what}”",
   "dates.addAll": "Add all {n} to your calendar",
   "dates.reminder": "Remind me",
   "dates.reminderNone": "No reminder",

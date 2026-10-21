@@ -731,7 +731,7 @@ export const bs: Record<MessageKey, string> = {
   "dates.verified": "Provjereno: datum je u ovoj rečenici",
   "dates.unverified": "Nije se moglo potvrditi. Provjerite rečenicu sami.",
   "dates.add": "Dodaj u kalendar",
-  "dates.addOne": "Dodaj „{what}“ u svoj kalendar",
+  "dates.addOne": "Dodaj u kalendar: „{what}“",
   "dates.addAll": "Dodaj svih {n} u svoj kalendar",
   "dates.reminder": "Podsjeti me",
   "dates.reminderNone": "Bez podsjetnika",
