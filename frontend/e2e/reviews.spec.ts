@@ -1,11 +1,20 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { API, newSignedInUser } from "./support/helpers";
 
 // Spaced repetition: rate flashcards, come back to the ones that are due, and the emails a person chose to receive.
 // (The AI service here is a stub: a study set has the cards "Front of card one", "Front of card two" and "Front of card three".)
 
 const tags = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
+
+// Rating a card saves it. The test waits for that to be answered before it goes anywhere else: the page that opens next only knows
+// about the rating once it is saved, and a test that moves on at once is sometimes too quick.
+async function rate(page: Page, card: Locator, answer: "Missed it" | "Knew it") {
+  await Promise.all([
+    page.waitForResponse((response) => response.url().includes("/cards/review") && response.request().method() === "POST"),
+    card.getByRole("button", { name: answer }).click(),
+  ]);
+}
 
 // A study set, made through the API with the browser's own session, so the test starts from a page that has one.
 async function makeStudySet(page: Page, title = "Cell biology notes") {
@@ -35,7 +44,7 @@ test.describe("rating flashcards", () => {
     await expect(card.getByTestId("rate-card")).toHaveCount(0); // the buttons come once the answer is shown
     await card.getByTestId("flashcard").click();
     await expect(card.getByTestId("rate-card")).toBeVisible();
-    await card.getByRole("button", { name: "Missed it" }).click();
+    await rate(page, card, "Missed it");
 
     // On to the next card; the missed one is due for review.
     await expect(card.getByTestId("flashcard")).toContainText("Front of card two");
@@ -46,7 +55,7 @@ test.describe("rating flashcards", () => {
 
     await card.getByRole("button", { name: "Next", exact: true }).click();
     await card.getByTestId("flashcard").click();
-    await card.getByRole("button", { name: "Knew it" }).click();
+    await rate(page, card, "Knew it");
     await card.getByRole("button", { name: "Back", exact: true }).click();
     await expect(card.getByTestId("card-status")).toContainText("Box 2 of 6, next review");
 
@@ -80,7 +89,7 @@ test.describe("the review", () => {
     const card = await makeStudySet(page);
     // Rate the first card as missed: it is due today.
     await card.getByTestId("flashcard").click();
-    await card.getByRole("button", { name: "Missed it" }).click();
+    await rate(page, card, "Missed it");
 
     await page.reload();
     const chip = page.getByTestId("review-chip");
@@ -113,7 +122,7 @@ test.describe("the review", () => {
     await newSignedInUser(page);
     const card = await makeStudySet(page);
     await card.getByTestId("flashcard").click();
-    await card.getByRole("button", { name: "Missed it" }).click();
+    await rate(page, card, "Missed it");
     await page.goto("/review");
 
     const reviewCard = page.getByTestId("review-card");
@@ -128,7 +137,7 @@ test.describe("the review", () => {
     await newSignedInUser(page);
     const card = await makeStudySet(page);
     await card.getByTestId("flashcard").click();
-    await card.getByRole("button", { name: "Knew it" }).click(); // known: due in two days, not today
+    await rate(page, card, "Knew it"); // known: due in two days, not today
     await page.goto("/review");
     await expect(page.getByTestId("review-empty")).toBeVisible();
     await page.goto("/dashboard");
@@ -141,7 +150,7 @@ test.describe("the review", () => {
     await newSignedInUser(page);
     const card = await makeStudySet(page);
     await card.getByTestId("flashcard").click();
-    await card.getByRole("button", { name: "Missed it" }).click();
+    await rate(page, card, "Missed it");
     await page.goto("/review");
     await expect(page.getByTestId("review-card")).toBeVisible();
     let results = await new AxeBuilder({ page }).withTags(tags).analyze();
