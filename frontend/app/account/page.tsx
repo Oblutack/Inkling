@@ -14,6 +14,7 @@ import { useT } from "../../components/I18nProvider";
 import type { MessageKey, Params } from "../../lib/i18n";
 import { downloadBlob } from "../../lib/exportDoc";
 import { libraryZip, libraryZipName, type Note } from "../../lib/obsidian";
+import PageTitle from "../../components/PageTitle";
 
 type Translate = (key: MessageKey, params?: Params) => string;
 
@@ -267,7 +268,7 @@ export default function AccountPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 md:py-10">
-      <h1 className="text-3xl md:text-4xl">{t("account.title")}</h1>
+      <PageTitle>{t("account.title")}</PageTitle>
       <ErrorText>{error}</ErrorText>
       <SuccessText>{notice}</SuccessText>
 

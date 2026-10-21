@@ -25,6 +25,8 @@ import {
   type ExamSet,
   type Marked,
 } from "../../lib/exam";
+import PageTitle from "../../components/PageTitle";
+import DrawnCheck from "../../components/DrawnCheck";
 
 type Phase = "setup" | "run" | "results";
 type Source = "collection" | "sets";
@@ -283,7 +285,7 @@ export default function ExamPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:py-10">
-      <h1 className="mb-2 text-3xl md:text-4xl">{t("exam.title")}</h1>
+      <PageTitle className="mb-3">{t("exam.title")}</PageTitle>
 
       {loadError && (
         <p className="text-base font-medium text-danger" role="alert">
@@ -519,6 +521,7 @@ export default function ExamPage() {
       {phase === "results" && finished && (
         <div className="space-y-6" data-testid="exam-results">
           <div className="card text-center">
+            <DrawnCheck className="mb-3" />
             {finished.timeUp && (
               <p className="mb-2 font-medium" role="status">
                 {t("exam.timeUp")}

@@ -9,6 +9,7 @@ import { useT } from "../../components/I18nProvider";
 import WatchCard from "../../components/WatchCard";
 import { API_URL, apiError } from "../../lib/api";
 import type { Watch, WatchList } from "../../lib/watch";
+import PageTitle from "../../components/PageTitle";
 
 // The pages a person watches: what each last found, and the way to check, pause or remove them.
 function Watches() {
@@ -46,7 +47,7 @@ function Watches() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 md:py-10">
-      <h1 className="mb-2 text-3xl md:text-4xl">{t("watch.title")}</h1>
+      <PageTitle className="mb-3">{t("watch.title")}</PageTitle>
       <p className="muted mb-6">{t("watch.intro")}</p>
 
       {added && (

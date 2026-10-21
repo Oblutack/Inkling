@@ -12,6 +12,7 @@ import { useT } from "../../components/I18nProvider";
 import { DocumentListSkeleton } from "../../components/Skeleton";
 import ReviewChip from "../../components/ReviewChip";
 import { fieldClass } from "../../components/styles";
+import PageTitle from "../../components/PageTitle";
 
 function Loading({ what }: { what: "common.loadingForm" | "common.loadingDocument" }) {
   return <p>{useT()(what)}</p>;
@@ -197,9 +198,7 @@ export default function DashboardPage() {
 
   return user ? (
     <div className="mx-auto max-w-4xl px-4 py-8 md:py-10">
-      <h1 className="mb-6 text-3xl md:text-4xl">
-        {t("dashboard.title")}
-      </h1>
+      <PageTitle className="mb-6">{t("dashboard.title")}</PageTitle>
 
       {/* Flashcards due today, and the way into a review */}
       <ReviewChip />

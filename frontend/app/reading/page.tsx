@@ -9,6 +9,7 @@ import { useI18n } from "../../components/I18nProvider";
 import { actionButton, fieldClass, textButton } from "../../components/styles";
 import { API_URL, apiError } from "../../lib/api";
 import { safeLink, savePayload, sourceOf, STATES, summaryText, type ReadingCounts, type ReadingItem, type ReadingList, type ReadingState } from "../../lib/reading";
+import PageTitle from "../../components/PageTitle";
 
 const ZERO: ReadingCounts = { unread: 0, read: 0, archived: 0 };
 
@@ -98,7 +99,7 @@ function Reading() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 md:py-10">
-      <h1 className="mb-2 text-3xl md:text-4xl">{t("reading.title")}</h1>
+      <PageTitle className="mb-3">{t("reading.title")}</PageTitle>
       <p className="muted mb-6">{t("reading.intro")}</p>
 
       <form onSubmit={(e) => void add(e)} className="card mb-6 space-y-3" data-testid="reading-add">

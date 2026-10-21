@@ -11,6 +11,8 @@ import { answer, currentCard, isFinished, startSession, type Session } from "../
 import { syncTimeZone } from "../../lib/timezone";
 import type { DueCard, StudyStats } from "../../types";
 import { actionButton } from "../../components/styles";
+import PageTitle from "../../components/PageTitle";
+import DrawnCheck from "../../components/DrawnCheck";
 
 // A review session: the flashcards that are due today, from all the person's study sets, one at a time. Press the card to see
 // the answer, then say whether it was known. A card that was missed comes round again before the end.
@@ -94,7 +96,7 @@ export default function ReviewPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:py-10">
-      <h1 className="mb-2 text-3xl md:text-4xl">{t("review.title")}</h1>
+      <PageTitle className="mb-3">{t("review.title")}</PageTitle>
       <p className="muted mb-6">{t("review.intro")}</p>
 
       {loadError && (
@@ -162,6 +164,7 @@ export default function ReviewPage() {
 
       {session && session.total > 0 && isFinished(session) && (
         <div className="card text-center" data-testid="review-finished">
+          <DrawnCheck className="mb-3" />
           <h2 className="text-2xl">{t("review.finished")}</h2>
           <p className="mt-3">{t("review.result", { knew: session.knewFirst, missed: session.missed })}</p>
           {stats && stats.streak > 0 && <p className="mt-2 font-medium">{t("review.streak", { n: stats.streak })}</p>}

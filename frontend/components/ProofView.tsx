@@ -41,14 +41,14 @@ export default function ProofView({ result, files, onOpenDocument }: ProofViewPr
         {result.sentences.map((s, i) => {
           if (s.kind === "heading" || s.support === null) {
             return (
-              <li key={i} className="pt-3 text-lg font-semibold">
+              <li key={i} className="rise-sm pt-3 text-lg font-semibold" style={{ "--i": Math.min(i, 12) } as React.CSSProperties}>
                 {s.text}
               </li>
             );
           }
           const warnings = numberWarnings(s, t);
           return (
-            <li key={i} data-support={s.support}>
+            <li key={i} data-support={s.support} className="rise-sm" style={{ "--i": Math.min(i, 12) } as React.CSSProperties}>
               <details>
                 <summary className="cursor-pointer">
                   <span

@@ -9,6 +9,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { API_URL } from "../../lib/api";
 import { interpretShare } from "../../lib/share";
 import { clearShare, readShare, type SharedPayload } from "../../lib/shareStore";
+import PageTitle from "../../components/PageTitle";
 
 const EInkForm = dynamic(() => import("../../components/EInkForm"), { ssr: false });
 
@@ -46,7 +47,7 @@ function Share() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 md:py-10">
-      <h1 className="mb-4 text-3xl md:text-4xl">{t("share.title")}</h1>
+      <PageTitle className="mb-4">{t("share.title")}</PageTitle>
 
       {phase === "loading" && <p role="status">{t("common.loading")}</p>}
 
