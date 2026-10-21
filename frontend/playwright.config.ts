@@ -20,8 +20,6 @@ export default defineConfig({
     baseURL: FRONTEND,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    // CI installs Playwright's own Chromium; locally the installed Chrome is used.
-    channel: process.env.CI ? undefined : "chrome",
     // A fake microphone that plays a test tone, already allowed, so recording from the browser can be tried for real.
     permissions: ["microphone"],
     launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] },
@@ -29,18 +27,19 @@ export default defineConfig({
   projects: [
     // Everything runs on a desktop, except the phone tests (e2e/mobile.spec.ts), which run twice: in WebKit (the engine of every
     // iPhone browser) with an iPhone's screen, and in Chromium with an Android phone's.
-    { name: "desktop", testIgnore: /mobile\.spec\.ts/ },
+    // CI installs Playwright's own Chromium; locally the installed Chrome is used (only here: it is not a channel of WebKit).
+    { name: "desktop", testIgnore: /mobile\.spec\.ts/, use: { channel: process.env.CI ? undefined : "chrome" } },
     {
       name: "iphone",
       testMatch: /mobile\.spec\.ts/,
       timeout: 120_000, // a walk through several screens, in a browser that is slower on a shared machine
-      use: { ...devices["iPhone 15"], channel: undefined, permissions: [], launchOptions: {} },
+      use: { ...devices["iPhone 15"], permissions: [], launchOptions: {} },
     },
     {
       name: "pixel",
       testMatch: /mobile\.spec\.ts/,
       timeout: 120_000,
-      use: { ...devices["Pixel 7"], channel: undefined },
+      use: { ...devices["Pixel 7"] },
     },
   ],
   webServer: [

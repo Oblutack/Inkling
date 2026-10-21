@@ -6,7 +6,16 @@ import { newSignedInUser, summarizeText } from "./support/helpers";
 // landmarks, and so on). They cannot replace testing with a keyboard and a screen reader, but they catch
 // the mistakes that are easy to make and easy to miss.
 
+// The screen is checked once it has settled: a text that is half faded in has half the contrast, and is not what anyone is left looking at.
+// (Animations that never end, such as the shimmer on a placeholder, and the ones that follow the scroll position are not waited for.)
+async function settled(page: Page) {
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.timeline !== document.timeline || a.effect?.getTiming().iterations === Infinity || a.playState !== "running"), null, {
+    timeout: 15_000,
+  });
+}
+
 async function violations(page: Page) {
+  await settled(page);
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
   return results.violations.map((v) => `${v.id} (${v.impact}): ${v.help} -> ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | ")}`);
 }

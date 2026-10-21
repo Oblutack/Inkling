@@ -28,7 +28,15 @@ interface Finding {
 // Looks at the page as it is now and lists what a phone would trip over. `scope` limits the look to one part of the page.
 async function settle(page: Page) {
   // wait until nothing is moving: CSS animations done, and the page height the same for a few looks in a row
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+  // (the ones that follow the scroll position, and the ones that repeat for ever, do not finish)
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.timeline === document.timeline && a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
   let last = -1, same = 0;
   for (let i = 0; i < 16 && same < 4; i++) {
     const h = await page.evaluate(() => `${document.documentElement.scrollHeight}:${Math.round(document.body.getBoundingClientRect().height)}`);
