@@ -323,6 +323,8 @@ export const en = {
   "nav.menu": "Menu",
   "nav.closeMenu": "Close the menu",
   "nav.home": "Inkling home",
+  "nav.summarizing": "Summarizing",
+  "nav.summaryReady": "Summary ready",
   "nav.skip": "Skip to the content",
   "footer.tagline": "Read, question and verify your documents.",
   "footer.source": "Open source on GitHub",

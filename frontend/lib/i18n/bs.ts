@@ -325,6 +325,8 @@ export const bs: Record<MessageKey, string> = {
   "nav.menu": "Meni",
   "nav.closeMenu": "Zatvori meni",
   "nav.home": "Početna Inklinga",
+  "nav.summarizing": "Sažimanje",
+  "nav.summaryReady": "Sažetak je spreman",
   "nav.skip": "Preskoči na sadržaj",
   "footer.tagline": "Čitajte, ispitujte i provjeravajte svoje dokumente.",
   "footer.source": "Otvoreni kod na GitHubu",

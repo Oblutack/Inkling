@@ -325,6 +325,8 @@ export const de: Record<MessageKey, string> = {
   "nav.menu": "Menü",
   "nav.closeMenu": "Menü schließen",
   "nav.home": "Inkling Startseite",
+  "nav.summarizing": "Fasse zusammen",
+  "nav.summaryReady": "Zusammenfassung fertig",
   "nav.skip": "Zum Inhalt springen",
   "footer.tagline": "Dokumente lesen, befragen und prüfen.",
   "footer.source": "Open Source auf GitHub",

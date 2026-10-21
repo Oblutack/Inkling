@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
+import { dashboardJob, IDLE } from "../lib/summaryJob";
 import BrandMark from "./BrandMark";
 import { useT } from "./I18nProvider";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -16,6 +17,11 @@ export default function Navbar() {
   const pathname = usePathname();
   const t = useT();
   const [open, setOpen] = useState(false);
+
+  // A summary that is being made (or has just been made) while the person looks at another page: said here, with a way back to it.
+  const job = dashboardJob();
+  const summarizing = useSyncExternalStore(job.subscribe, job.getSnapshot, () => IDLE);
+  const showJob = Boolean(user) && pathname !== "/dashboard" && (summarizing.isLoading || summarizing.unseen);
 
   // Going somewhere closes the phone menu; so does Escape.
   useEffect(() => setOpen(false), [pathname]);
@@ -61,10 +67,28 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-ink/15 bg-canvas/90 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5" aria-label="Main">
-        <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5" aria-label={t("nav.home")}>
-          <BrandMark />
-          <span className="font-display text-2xl tracking-[0.2em]">Inkling</span>
-        </Link>
+        <div className="flex min-w-0 items-center gap-3">
+          <Link href={user ? "/dashboard" : "/"} className="flex items-center gap-2.5" aria-label={t("nav.home")}>
+            <BrandMark />
+            <span className="font-display text-2xl tracking-[0.2em]">Inkling</span>
+          </Link>
+          {showJob && (
+            <Link href="/dashboard" className="chip pop whitespace-nowrap text-xs sm:text-sm" role="status" data-testid="summary-chip">
+              {summarizing.isLoading ? (
+                <>
+                  {t("nav.summarizing")}
+                  <span className="dots" aria-hidden="true">
+                    <span style={{ "--i": 0 } as React.CSSProperties}>.</span>
+                    <span style={{ "--i": 1 } as React.CSSProperties}>.</span>
+                    <span style={{ "--i": 2 } as React.CSSProperties}>.</span>
+                  </span>
+                </>
+              ) : (
+                <>✓ {t("nav.summaryReady")}</>
+              )}
+            </Link>
+          )}
+        </div>
 
         <div className="hidden items-center gap-1 lg:flex">
           {links}

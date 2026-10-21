@@ -325,6 +325,8 @@ export const fr: Record<MessageKey, string> = {
   "nav.menu": "Menu",
   "nav.closeMenu": "Fermer le menu",
   "nav.home": "Accueil d'Inkling",
+  "nav.summarizing": "Résumé en cours",
+  "nav.summaryReady": "Résumé prêt",
   "nav.skip": "Aller au contenu",
   "footer.tagline": "Lisez, interrogez et vérifiez vos documents.",
   "footer.source": "Open source sur GitHub",

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { TURNSTILE_HEADER } from "../lib/api";
 import { readSummaryEvents, type SummaryEvent } from "../lib/sse";
@@ -7,14 +7,12 @@ import { isAudioFile, isDocumentFile, isImageFile, MAX_AUDIO_MB, webLinkIn } fro
 import { shrinkPhoto } from "../lib/photos";
 import { loadPreferences, savePreferences } from "../lib/preferences";
 import { MAX_FILES } from "../lib/summaryOptions";
+import { IDLE, jobFor, waitingProgress, WAITING_STEP_MS } from "../lib/summaryJob";
 import { useT } from "../components/I18nProvider";
 
 // Past this many words in pasted text, a page limit makes more sense than a word count.
 const LONG_TEXT_WORDS = 1000;
-// Until the server reports real progress, ease toward this value so the bar keeps moving.
-const WAITING_PROGRESS_CAP = 35;
-
-export type Stage = "idle" | "preparing" | "summarizing" | "writing";
+export type { Stage } from "../lib/summaryJob";
 
 interface UseSummarizerOptions {
   endpoint: string;
@@ -34,13 +32,18 @@ export function useSummarizer({ endpoint, onSummaryCreated, humanCheck }: UseSum
   const [language, setLanguage] = useState("English");
   const [files, setFiles] = useState<File[]>([]);
   const [inputText, setInputText] = useState("");
-  const [summary, setSummary] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [stage, setStage] = useState<Stage>("idle");
-  const [chunks, setChunks] = useState({ done: 0, total: 0 });
-  const [waiting, setWaiting] = useState(0);
-  const abortRef = useRef<AbortController | null>(null);
+
+  // The summary being made is kept outside this page (lib/summaryJob.ts), so it goes on when the person looks at another page
+  // and is still there, with its progress, when they come back.
+  const job = jobFor(endpoint);
+  const { summary, error, isLoading, stage, chunks, startedAt } = useSyncExternalStore(job.subscribe, job.getSnapshot, () => IDLE);
+  const setError = useCallback((message: string) => job.update({ error: message }), [job]);
+  useEffect(() => {
+    job.show(onSummaryCreated);
+    return () => job.hide();
+  }, [job]); // eslint-disable-line react-hooks/exhaustive-deps
+  // What to do once a summary is saved is whatever the form on screen wants at that moment.
+  useEffect(() => job.setOnCreated(onSummaryCreated));
 
   // The last style, language and length come back on the next visit. They are read after the first
   // render (not in the initial state) so the server-rendered page and the first client render agree.
@@ -65,23 +68,22 @@ export function useSummarizer({ endpoint, onSummaryCreated, humanCheck }: UseSum
   );
 
   // Keeps the bar moving while the server hasn't reported anything yet.
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!isLoading) return;
-    setWaiting(0);
-    const id = setInterval(() => {
-      setWaiting((prev) => Math.min(WAITING_PROGRESS_CAP, prev + (WAITING_PROGRESS_CAP - prev) / 8));
-    }, 800);
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), WAITING_STEP_MS);
     return () => clearInterval(id);
   }, [isLoading]);
 
   const progress = useMemo(() => {
     if (!isLoading) return 100;
-    if (stage === "writing") return 95;
-    if (stage === "summarizing" && chunks.total > 0) {
-      return Math.max(waiting, 10 + (80 * chunks.done) / chunks.total);
-    }
-    return waiting;
-  }, [isLoading, stage, chunks, waiting]);
+    const waiting = waitingProgress(startedAt, now);
+    const reported =
+      stage === "writing" ? 95 : stage === "summarizing" && chunks.total > 0 ? 10 + (80 * chunks.done) / chunks.total : 0;
+    // A long document is condensed in rounds, and each round counts its sections from the start again: the bar must not follow it back.
+    return job.advance(Math.max(waiting, reported));
+  }, [isLoading, stage, chunks, startedAt, now, job]);
 
   const stageLabel =
     stage === "summarizing" && chunks.total > 1
@@ -99,7 +101,7 @@ export function useSummarizer({ endpoint, onSummaryCreated, humanCheck }: UseSum
     // Keep the same array when already empty so typing doesn't re-render for nothing.
     setFiles((prev) => (prev.length === 0 ? prev : []));
     setError("");
-  }, []);
+  }, [setError]);
 
   const addFiles = useCallback(
     (picked: File[]) => {
@@ -141,7 +143,7 @@ export function useSummarizer({ endpoint, onSummaryCreated, humanCheck }: UseSum
       setFiles(merged.slice(0, MAX_FILES));
       setInputText("");
     },
-    [files, t, user]
+    [files, t, user, setError]
   );
 
   const removeFile = useCallback((index: number) => {
@@ -165,7 +167,7 @@ export function useSummarizer({ endpoint, onSummaryCreated, humanCheck }: UseSum
     if (current > 1) setPageLimit(String(current - 1));
   };
 
-  const cancel = () => abortRef.current?.abort();
+  const cancel = () => job.cancel();
 
   // Builds the request for the current input. Streaming is requested with ?stream=true.
   const buildRequest = (headers: Record<string, string>, uploads: File[]): { url: string; init: RequestInit } => {
@@ -198,12 +200,15 @@ export function useSummarizer({ endpoint, onSummaryCreated, humanCheck }: UseSum
   const handleEvent = (event: SummaryEvent): "done" | "error" | undefined => {
     switch (event.type) {
       case "status":
-        setStage(event.stage);
-        if (event.stage === "summarizing") setChunks({ done: event.done ?? 0, total: event.total ?? 0 });
+        job.update(
+          event.stage === "summarizing"
+            ? { stage: event.stage, chunks: { done: event.done ?? 0, total: event.total ?? 0 } }
+            : { stage: event.stage }
+        );
         return;
       case "delta":
-        setStage("writing");
-        setSummary((prev) => prev + event.text);
+        job.update({ stage: "writing" });
+        job.appendSummary(event.text);
         return;
       case "error":
         setError(event.message || t("form.errGeneric"));
@@ -219,13 +224,10 @@ export function useSummarizer({ endpoint, onSummaryCreated, humanCheck }: UseSum
       return;
     }
 
-    setError("");
-    setSummary("");
-    setStage("preparing");
-    setChunks({ done: 0, total: 0 });
-    setIsLoading(true);
+    job.start();
     const controller = new AbortController();
-    abortRef.current = controller;
+    job.controller = controller;
+    let saved = false;
 
     try {
       const headers: Record<string, string> = {};
@@ -250,7 +252,7 @@ export function useSummarizer({ endpoint, onSummaryCreated, humanCheck }: UseSum
       });
 
       if (outcome === "done") {
-        onSummaryCreated?.();
+        saved = true;
       } else if (!outcome) {
         setError(t("form.errInterrupted"));
       }
@@ -264,9 +266,8 @@ export function useSummarizer({ endpoint, onSummaryCreated, humanCheck }: UseSum
       }
     } finally {
       humanCheck?.reset();
-      setStage("idle");
-      setIsLoading(false);
-      abortRef.current = null;
+      // The form that is on screen now (this one, or another visit's) is told, or the top bar says it is ready.
+      job.finish(saved);
     }
   };
 

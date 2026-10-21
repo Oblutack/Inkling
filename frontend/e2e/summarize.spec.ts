@@ -360,6 +360,42 @@ test.describe("summarizing while signed in", () => {
       titles.findIndex((t) => t.includes("first.pdf"))
     );
   });
+
+  test("a summary goes on while the person looks at another page, and is shown when they come back", async ({ page }) => {
+    await newSignedInUser(page);
+    await page.goto("/dashboard");
+    await summarizeText(page, `${ARTICLE} SLOW_ME`);
+    await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+
+    // Leaving the dashboard does not stop it, and the top bar says so.
+    await page.getByRole("link", { name: "Reading list" }).click();
+    await expect(page).toHaveURL(/\/reading/);
+    const chip = page.getByTestId("summary-chip");
+    await expect(chip).toContainText("Summarizing");
+
+    // Back on the dashboard it is still being written (not lost), and then it is saved.
+    await chip.click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+    await expect(page.getByTestId("document-card")).toHaveCount(1, { timeout: 30_000 });
+    await expect(page.getByTestId("summary-chip")).toHaveCount(0);
+  });
+
+  test("a summary that finishes while the person is elsewhere is announced in the top bar", async ({ page }) => {
+    await newSignedInUser(page);
+    await page.goto("/dashboard");
+    await summarizeText(page, `${ARTICLE} SLOW_ME`);
+    await expect(page.getByRole("button", { name: "Cancel" })).toBeVisible();
+    await page.getByRole("link", { name: "Reading list" }).click();
+
+    const chip = page.getByTestId("summary-chip");
+    await expect(chip).toContainText("Summary ready", { timeout: 30_000 });
+    await chip.click();
+    // The saved summary is in the list; the form is empty, not showing the old one again.
+    await expect(page.getByTestId("document-card")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Cancel" })).toHaveCount(0);
+    await expect(page.getByTestId("summary-chip")).toHaveCount(0);
+  });
 });
 
 async function summarizeTextAndWaitForCard(page: import("@playwright/test").Page) {
