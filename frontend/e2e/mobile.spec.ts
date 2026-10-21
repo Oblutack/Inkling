@@ -354,13 +354,28 @@ test.describe("on a phone", () => {
 
   test("a phone that asks for less motion gets cards that do not slide", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
+    // Every look at a card, one for each screen refresh from the very first, so a slide cannot be missed or caught half way by
+    // looking at the wrong moment (on a slow machine the first look can be at the card's starting place, before it is shown).
+    await page.addInitScript(() => {
+      const seen = new Set<string>();
+      (window as unknown as { __cardTransforms: Set<string> }).__cardTransforms = seen;
+      const tick = () => {
+        document.querySelectorAll('[data-testid="document-card"]').forEach((el) => seen.add(getComputedStyle(el).transform));
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
     await newSignedInUser(page);
     await page.goto("/dashboard");
     await summarizeText(page, LEASE);
-    const saved = card(page, "Lease terms");
-    await expect(saved).toBeVisible();
-    // right away, not after a slide: no sliding or growing (a short fade is allowed: it is not movement)
-    const transform = await saved.evaluate((el) => getComputedStyle(el).transform);
-    expect(["none", "matrix(1, 0, 0, 1, 0, 0)"]).toContain(transform);
+    await expect(card(page, "Lease terms")).toBeVisible();
+    await page.waitForTimeout(900); // longer than the card's entrance takes
+    const { seen, last } = await page.evaluate(() => ({
+      seen: [...(window as unknown as { __cardTransforms: Set<string> }).__cardTransforms],
+      last: getComputedStyle(document.querySelector('[data-testid="document-card"]')!).transform,
+    }));
+    // It ends in place, and went from its starting place to there in one step: with the slide there would be many places between.
+    expect(["none", "matrix(1, 0, 0, 1, 0, 0)"]).toContain(last);
+    expect(seen.length, `the card was seen in ${seen.length} places: ${seen.join(" | ")}`).toBeLessThanOrEqual(2);
   });
 });
