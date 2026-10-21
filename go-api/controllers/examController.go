@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"math/rand/v2"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,7 +23,9 @@ const (
 	maxExamQuestions  = 40
 	maxExamDocuments  = 100
 	maxExamSeconds    = 24 * 60 * 60
-	maxExamHistory    = 30
+	maxExamHistory    = 30  // how many a list gives when no other number is asked for
+	maxExamListLimit  = 200 // and the most it can be asked for
+	maxExamOptions    = 6
 	maxExamTagRunes   = 30
 	maxExamTitleRunes = 200
 	maxExamMissed     = maxExamQuestions
@@ -235,6 +238,48 @@ type examMissed struct {
 	Question   string `json:"question"`
 }
 
+// examDetail is one question of a finished exam as it was asked, with what was chosen (null when the question was left alone):
+// enough to open the exam again later and look through it.
+type examDetail struct {
+	DocumentID    uint     `json:"documentId"`
+	DocumentTitle string   `json:"documentTitle"`
+	Question      string   `json:"question"`
+	Options       []string `json:"options"`
+	Answer        int      `json:"answer"`
+	Explanation   string   `json:"explanation"`
+	Chosen        *int     `json:"chosen"`
+}
+
+// checkedDetail cleans the questions of an exam and makes sure they match the result they came with: they are of the sets in
+// the exam, the answers point at real options, and the number of right answers is the score. It reports whether they do.
+func checkedDetail(detail []examDetail, ids map[uint]bool, questions, correct int) bool {
+	if len(detail) != questions {
+		return false
+	}
+	right := 0
+	for i := range detail {
+		d := &detail[i]
+		d.DocumentTitle = clip(cleanLine(d.DocumentTitle), maxExamTitleRunes)
+		d.Question = clip(cleanLine(d.Question), maxQuizRunes)
+		d.Explanation = clip(cleanLine(d.Explanation), maxQuizRunes)
+		if !ids[d.DocumentID] || len(d.Options) < 2 || len(d.Options) > maxExamOptions || d.Answer < 0 || d.Answer >= len(d.Options) {
+			return false
+		}
+		for j := range d.Options {
+			d.Options[j] = clip(cleanLine(d.Options[j]), maxQuizRunes)
+		}
+		if d.Chosen != nil {
+			if *d.Chosen < 0 || *d.Chosen >= len(d.Options) {
+				return false
+			}
+			if *d.Chosen == d.Answer {
+				right++
+			}
+		}
+	}
+	return right == correct
+}
+
 // RecordExam keeps the result of an exam the page marked. The score is the person's own record, so it is checked only for
 // being sensible: the sets are theirs, and the numbers add up.
 func RecordExam(c *gin.Context) {
@@ -247,6 +292,8 @@ func RecordExam(c *gin.Context) {
 		Seconds     int             `json:"seconds"`
 		Breakdown   []examBreakdown `json:"breakdown"`
 		Missed      []examMissed    `json:"missed"`
+		// The questions as they were asked, so the exam can be opened again. Older pages send none.
+		Detail []examDetail `json:"detail"`
 	}
 	if !bindJSON(c, &body) {
 		return
@@ -278,14 +325,23 @@ func RecordExam(c *gin.Context) {
 			return
 		}
 	}
+	var detail any // NULL when the page sent no questions
+	if len(body.Detail) > 0 {
+		if !checkedDetail(body.Detail, ids, body.Questions, body.Correct) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "That exam result does not add up."})
+			return
+		}
+		kept, _ := json.Marshal(body.Detail)
+		detail = string(kept)
+	}
 	idList, _ := json.Marshal(body.DocumentIDs)
 	breakdown, _ := json.Marshal(append([]examBreakdown{}, body.Breakdown...))
 	missed, _ := json.Marshal(append([]examMissed{}, body.Missed...))
 	var id uint
 	err := initializers.DB.Raw(
-		`INSERT INTO exam_results (user_id, tag, document_ids, questions, correct, seconds, breakdown, missed)
-		 VALUES (?, ?, ?::jsonb, ?, ?, ?, ?::jsonb, ?::jsonb) RETURNING id`,
-		user.ID, tag, string(idList), body.Questions, body.Correct, body.Seconds, string(breakdown), string(missed),
+		`INSERT INTO exam_results (user_id, tag, document_ids, questions, correct, seconds, breakdown, missed, detail)
+		 VALUES (?, ?, ?::jsonb, ?, ?, ?, ?::jsonb, ?::jsonb, ?::jsonb) RETURNING id`,
+		user.ID, tag, string(idList), body.Questions, body.Correct, body.Seconds, string(breakdown), string(missed), detail,
 	).Scan(&id).Error
 	if err != nil {
 		_ = c.Error(err)
@@ -295,7 +351,8 @@ func RecordExam(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"id": id})
 }
 
-// ExamHistory lists the person's recent exams, newest first, for one collection (`?tag=`) or all of them.
+// ExamHistory lists the person's exams, newest first, for one collection (`?tag=`) or all of them. By default it gives the
+// latest 30; `?limit=` asks for more (up to 200) and `?offset=` for the ones after those.
 func ExamHistory(c *gin.Context) {
 	user := middleware.CurrentUser(c)
 	type row struct {
@@ -305,17 +362,89 @@ func ExamHistory(c *gin.Context) {
 		Correct    int       `json:"correct"`
 		Seconds    int       `json:"seconds"`
 		FinishedAt time.Time `json:"finishedAt"`
+		// How many sets it was drawn from, and whether it can be opened again (exams from before that was kept cannot).
+		Sets      int  `json:"sets"`
+		HasDetail bool `json:"hasDetail"`
+	}
+	limit, offset := maxExamHistory, 0
+	if n, err := strconv.Atoi(c.Query("limit")); err == nil && n >= 1 {
+		limit = min(n, maxExamListLimit)
+	}
+	if n, err := strconv.Atoi(c.Query("offset")); err == nil && n >= 0 {
+		offset = n
 	}
 	query := initializers.DB.Table("exam_results").
-		Select("id, tag, questions, correct, seconds, finished_at").
+		Select("id, tag, questions, correct, seconds, finished_at, jsonb_array_length(document_ids) AS sets, (detail IS NOT NULL) AS has_detail").
 		Where("user_id = ?", user.ID)
 	if _, asked := c.GetQuery("tag"); asked {
 		query = query.Where("tag = ?", cleanLine(c.Query("tag")))
 	}
 	rows := []row{}
-	if err := query.Order("finished_at DESC, id DESC").Limit(maxExamHistory).Scan(&rows).Error; err != nil {
+	if err := query.Order("finished_at DESC, id DESC").Limit(limit).Offset(offset).Scan(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load your exams."})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"results": rows})
+}
+
+// ExamResult gives one exam of the person's in full: its score, how each set did, the questions that were missed and, for an
+// exam taken since the questions were kept, every question as it was asked with what was chosen (detail is null before that).
+func ExamResult(c *gin.Context) {
+	user := middleware.CurrentUser(c)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Exam not found"})
+		return
+	}
+	var row struct {
+		ID         uint
+		Tag        string
+		Questions  int
+		Correct    int
+		Seconds    int
+		FinishedAt time.Time
+		Breakdown  string
+		Missed     string
+		Detail     sql.NullString
+	}
+	found := initializers.DB.Raw(
+		`SELECT id, tag, questions, correct, seconds, finished_at, breakdown::text AS breakdown, missed::text AS missed, detail::text AS detail
+		 FROM exam_results WHERE id = ? AND user_id = ?`, id, user.ID,
+	).Scan(&row)
+	if found.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load that exam."})
+		return
+	}
+	if found.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Exam not found"})
+		return
+	}
+	detail := json.RawMessage("null")
+	if row.Detail.Valid {
+		detail = json.RawMessage(row.Detail.String)
+	}
+	c.JSON(http.StatusOK, gin.H{"result": gin.H{
+		"id": row.ID, "tag": row.Tag, "questions": row.Questions, "correct": row.Correct, "seconds": row.Seconds,
+		"finishedAt": row.FinishedAt, "breakdown": json.RawMessage(row.Breakdown), "missed": json.RawMessage(row.Missed), "detail": detail,
+	}})
+}
+
+// DeleteExamResult removes one of the person's past exams.
+func DeleteExamResult(c *gin.Context) {
+	user := middleware.CurrentUser(c)
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Exam not found"})
+		return
+	}
+	result := initializers.DB.Exec("DELETE FROM exam_results WHERE id = ? AND user_id = ?", id, user.ID)
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not delete that exam."})
+		return
+	}
+	if result.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Exam not found"})
+		return
+	}
+	c.Status(http.StatusNoContent)
 }

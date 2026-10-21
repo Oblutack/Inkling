@@ -6,6 +6,8 @@ import (
 	"ai-summarizer/go-api/middleware"
 	"ai-summarizer/go-api/models"
 	"ai-summarizer/go-api/notices"
+	"database/sql"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -128,9 +130,26 @@ func ExportAccount(c *gin.Context) {
 		Correct    int       `json:"correct"`
 		Seconds    int       `json:"seconds"`
 		FinishedAt time.Time `json:"finishedAt"`
+		// Every question as it was asked, with what was chosen (left out for exams taken before these were kept).
+		Detail json.RawMessage `json:"detail,omitempty"`
 	}
+	var examStored []struct {
+		Tag        string
+		Questions  int
+		Correct    int
+		Seconds    int
+		FinishedAt time.Time
+		Detail     sql.NullString
+	}
+	initializers.DB.Raw(`SELECT tag, questions, correct, seconds, finished_at, detail::text AS detail FROM exam_results WHERE user_id = ? ORDER BY finished_at`, user.ID).Scan(&examStored)
 	examRows := []examExport{}
-	initializers.DB.Raw(`SELECT tag, questions, correct, seconds, finished_at FROM exam_results WHERE user_id = ? ORDER BY finished_at`, user.ID).Scan(&examRows)
+	for _, row := range examStored {
+		exam := examExport{Tag: row.Tag, Questions: row.Questions, Correct: row.Correct, Seconds: row.Seconds, FinishedAt: row.FinishedAt}
+		if row.Detail.Valid {
+			exam.Detail = json.RawMessage(row.Detail.String)
+		}
+		examRows = append(examRows, exam)
+	}
 
 	// The keys themselves are never kept, so the export lists what is: their names, when they were made and last used.
 	keyRecords, _ := auth.APIKeysOf(user.ID)

@@ -304,3 +304,158 @@ func TestExamResultsGoWithTheAccount(t *testing.T) {
 		t.Errorf("results are removed with the person: %d", n)
 	}
 }
+
+// --- the whole exam is kept, and can be opened again ---
+
+// examWithDetail is a finished exam of three questions on one set (two right, one left alone), as the page sends it.
+func examWithDetail(id int) map[string]any {
+	question := func(n int, chosen any) map[string]any {
+		return map[string]any{
+			"documentId": id, "documentTitle": "Words", "question": fmt.Sprintf("Question %d?", n),
+			"options": []string{"right", "wrong a", "wrong b", "wrong c"}, "answer": 0, "explanation": "Because.", "chosen": chosen,
+		}
+	}
+	return map[string]any{
+		"tag": "course", "documentIds": []int{id}, "questions": 3, "correct": 2, "seconds": 90,
+		"breakdown": []map[string]any{{"documentId": id, "title": "Words", "questions": 3, "correct": 2}},
+		"missed":    []map[string]any{{"documentId": id, "question": "Question 3?"}},
+		"detail":    []map[string]any{question(1, 0), question(2, 0), question(3, nil)},
+	}
+}
+
+func TestAnExamIsKeptInFullAndCanBeOpenedAgain(t *testing.T) {
+	a := newApp(t)
+	cl, _ := a.newUser()
+	id := saveText(t, cl, "Words.")
+	r := cl.post("/exams/results", examWithDetail(id))
+	if r.Status != http.StatusCreated {
+		t.Fatalf("record: %d %s", r.Status, r.Body)
+	}
+	exam := int(r.JSON()["id"].(float64))
+
+	listed := cl.get("/exams/results").JSON()["results"].([]any)[0].(map[string]any)
+	if listed["hasDetail"] != true || listed["sets"].(float64) != 1 {
+		t.Errorf("the list says it can be opened, and from how many sets: %v", listed)
+	}
+	opened := cl.get(fmt.Sprintf("/exams/results/%d", exam))
+	if opened.Status != http.StatusOK {
+		t.Fatalf("open: %d %s", opened.Status, opened.Body)
+	}
+	result := opened.JSON()["result"].(map[string]any)
+	detail := result["detail"].([]any)
+	if len(detail) != 3 || result["correct"].(float64) != 2 || result["tag"] != "course" {
+		t.Fatalf("the exam comes back whole: %v", result)
+	}
+	first, third := detail[0].(map[string]any), detail[2].(map[string]any)
+	if first["chosen"].(float64) != 0 || third["chosen"] != nil || first["question"] != "Question 1?" || len(first["options"].([]any)) != 4 {
+		t.Errorf("each question with what was chosen (nothing for the one left alone): %v %v", first, third)
+	}
+	if len(result["breakdown"].([]any)) != 1 || len(result["missed"].([]any)) != 1 {
+		t.Errorf("the breakdown and the missed questions too: %v", result)
+	}
+}
+
+func TestAnExamKeptBeforeTheQuestionsWereKeptStillOpensWithWhatItHas(t *testing.T) {
+	a := newApp(t)
+	cl, _ := a.newUser()
+	id := saveText(t, cl, "Words.")
+	body := examWithDetail(id)
+	delete(body, "detail") // as an older page sent it
+	r := cl.post("/exams/results", body)
+	if r.Status != http.StatusCreated {
+		t.Fatalf("record: %d %s", r.Status, r.Body)
+	}
+	listed := cl.get("/exams/results").JSON()["results"].([]any)[0].(map[string]any)
+	if listed["hasDetail"] != false {
+		t.Errorf("an exam without its questions says so: %v", listed)
+	}
+	result := cl.get(fmt.Sprintf("/exams/results/%d", int(r.JSON()["id"].(float64)))).JSON()["result"].(map[string]any)
+	if result["detail"] != nil || len(result["missed"].([]any)) != 1 || result["correct"].(float64) != 2 {
+		t.Errorf("no questions, but the score and the missed question are there: %v", result)
+	}
+}
+
+func TestExamQuestionsThatDoNotMatchTheResultAreRefused(t *testing.T) {
+	a := newApp(t)
+	cl, _ := a.newUser()
+	id := saveText(t, cl, "Words.")
+	detailOf := func(m map[string]any) []map[string]any { return m["detail"].([]map[string]any) }
+	bad := map[string]func(m map[string]any){
+		"fewer questions than the exam had": func(m map[string]any) { m["detail"] = detailOf(m)[:2] },
+		"a score that is not what was chosen": func(m map[string]any) {
+			m["correct"] = 1
+			m["missed"] = []map[string]any{{"documentId": id, "question": "a"}, {"documentId": id, "question": "b"}}
+		},
+		"an answer past the options":          func(m map[string]any) { detailOf(m)[0]["answer"] = 4 },
+		"a choice past the options":           func(m map[string]any) { detailOf(m)[0]["chosen"] = 9 },
+		"a question of a set not in the exam": func(m map[string]any) { detailOf(m)[1]["documentId"] = id + 100 },
+		"one option only":                     func(m map[string]any) { detailOf(m)[1]["options"] = []string{"alone"} },
+		"seven options":                       func(m map[string]any) { detailOf(m)[1]["options"] = []string{"1", "2", "3", "4", "5", "6", "7"} },
+	}
+	for name, change := range bad {
+		m := examWithDetail(id)
+		change(m)
+		if r := cl.post("/exams/results", m); r.Status != http.StatusBadRequest && r.Status != http.StatusNotFound {
+			t.Errorf("%s: %d %s", name, r.Status, r.Body)
+		}
+	}
+	if n := count(t, a.db, "SELECT count(*) FROM exam_results"); n != 0 {
+		t.Errorf("nothing was kept: %d", n)
+	}
+}
+
+func TestPastExamsAreListedInPagesAndBelongToTheirOwner(t *testing.T) {
+	a := newApp(t)
+	alice, _ := a.newUser()
+	bob, _ := a.newUser()
+	id := saveText(t, alice, "Words.")
+	var first int
+	for i := 0; i < 5; i++ {
+		r := alice.post("/exams/results", examWithDetail(id))
+		if i == 0 {
+			first = int(r.JSON()["id"].(float64))
+		}
+	}
+	page := func(query string) []any { return alice.get("/exams/results" + query).JSON()["results"].([]any) }
+	if len(page("")) != 5 || len(page("?limit=2")) != 2 || len(page("?limit=2&offset=4")) != 1 {
+		t.Errorf("paging: %d %d %d", len(page("")), len(page("?limit=2")), len(page("?limit=2&offset=4")))
+	}
+	if got := page("?limit=2&offset=4")[0].(map[string]any)["id"].(float64); int(got) != first {
+		t.Errorf("the oldest is last: %v", got)
+	}
+	if len(page("?limit=100000")) != 5 {
+		t.Errorf("a huge limit is allowed but capped, not an error")
+	}
+
+	path := fmt.Sprintf("/exams/results/%d", first)
+	if r := bob.get(path); r.Status != http.StatusNotFound {
+		t.Errorf("someone else's exam cannot be opened: %d", r.Status)
+	}
+	if r := bob.delete(path, nil); r.Status != http.StatusNotFound {
+		t.Errorf("or deleted: %d", r.Status)
+	}
+	if r := alice.get("/exams/results/not-a-number"); r.Status != http.StatusNotFound {
+		t.Errorf("a bad id: %d", r.Status)
+	}
+	if r := alice.delete(path, nil); r.Status != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", r.Status, r.Body)
+	}
+	if r := alice.get(path); r.Status != http.StatusNotFound || len(page("")) != 4 {
+		t.Errorf("it is gone: %d %d", r.Status, len(page("")))
+	}
+}
+
+func TestTheExportHasTheQuestionsOfEveryExam(t *testing.T) {
+	a := newApp(t)
+	cl, _ := a.newUser()
+	id := saveText(t, cl, "Words.")
+	cl.post("/exams/results", examWithDetail(id))
+	r := cl.get("/account/export")
+	if r.Status != http.StatusOK {
+		t.Fatalf("export: %d %s", r.Status, r.Body)
+	}
+	exams := r.JSON()["examResults"].([]any)
+	if len(exams) != 1 || len(exams[0].(map[string]any)["detail"].([]any)) != 3 {
+		t.Errorf("the exam is in the export with its questions: %v", exams)
+	}
+}

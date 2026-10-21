@@ -118,6 +118,8 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 	textBody := middleware.MaxBody(controllers.MaxTextBytes)
 	chatBody := middleware.MaxBody(controllers.MaxTextBytes)
 	smallBody := middleware.MaxBody(16 << 10) // auth and account requests are tiny JSON
+	// A finished exam is sent with all of its questions (up to 40, each with its options and explanation).
+	examBody := middleware.MaxBody(128 << 10)
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from Go API Gateway"})
@@ -214,8 +216,10 @@ func NewRouter(logger *slog.Logger, rates Rates) (*gin.Engine, error) {
 		authorized.PUT("/reading-list/:id", reviewLimit, smallBody, controllers.UpdateReadingItem)
 		authorized.DELETE("/reading-list/:id", reviewLimit, controllers.RemoveReadingItem)
 		authorized.POST("/exams", reviewLimit, smallBody, controllers.DrawExam)
-		authorized.POST("/exams/results", reviewLimit, smallBody, controllers.RecordExam)
+		authorized.POST("/exams/results", reviewLimit, examBody, controllers.RecordExam)
 		authorized.GET("/exams/results", reviewLimit, controllers.ExamHistory)
+		authorized.GET("/exams/results/:id", reviewLimit, controllers.ExamResult)
+		authorized.DELETE("/exams/results/:id", reviewLimit, controllers.DeleteExamResult)
 		authorized.GET("/study/stats", reviewLimit, controllers.StudyStats)
 
 		// Watched pages: opened now and then, and the person is told when something that matters changed.
