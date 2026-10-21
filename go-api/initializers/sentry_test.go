@@ -14,8 +14,10 @@ func TestSentryIsOffWithoutADSN(t *testing.T) {
 	t.Setenv("SENTRY_DSN", "")
 	flush := SetupSentry(quiet)
 	flush() // must be safe to call
-	if sentry.CurrentHub().Client() != nil {
-		t.Error("no DSN was given, so no client should exist")
+	// Newer versions of the library keep a default client that has no DSN and drops every event; what matters is that nothing
+	// is configured to be sent.
+	if client := sentry.CurrentHub().Client(); client != nil && client.Options().Dsn != "" {
+		t.Errorf("no DSN was given, so no events should be sent anywhere, but the client has the DSN %q", client.Options().Dsn)
 	}
 }
 
