@@ -65,7 +65,9 @@ function Preview() {
     <div className="card relative mx-auto w-full max-w-md" aria-hidden="true">
       <div className="flex items-start justify-between gap-3">
         <p className="font-semibold">{t("preview.title")}</p>
-        <span className="chip pointer-events-none text-xs">{t("preview.checked")}</span>
+        <span className="chip pop pointer-events-none text-xs" style={{ animationDelay: "2.3s" }}>
+          {t("preview.checked")}
+        </span>
       </div>
       <ul className="mt-4 space-y-3">
         {(
@@ -74,18 +76,20 @@ function Preview() {
             ["s2", "found"],
             ["s3", "notFound"],
           ] as const
-        ).map(([sentence, state]) => (
+        ).map(([sentence, state], i) => (
           <li key={sentence} className="flex gap-3">
+            {/* The sentences are checked one at a time, as the product does it. */}
             <span
-              className={`mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+              className={`pop mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${
                 state === "found" ? "bg-accent text-accent-fg" : "bg-danger text-danger-fg"
               }`}
+              style={{ animationDelay: `${700 + i * 500}ms` }}
             >
               {state === "found" ? "✓" : "✕"}
             </span>
             <span>
               <span className="reading block text-base">{t(`preview.${sentence}`)}</span>
-              <span className={`text-sm font-medium ${state === "found" ? "text-ink/70" : "text-danger"}`}>
+              <span className={`rise-sm block text-sm font-medium ${state === "found" ? "text-ink/70" : "text-danger"}`} style={{ animationDelay: `${850 + i * 500}ms` }}>
                 {t(state === "found" ? "preview.found" : "preview.notFound")}
               </span>
             </span>
@@ -93,10 +97,14 @@ function Preview() {
         ))}
       </ul>
       <div className="mt-5 space-y-2 border-t border-ink/15 pt-4">
-        <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-ink/10 px-4 py-2 text-sm">{t("preview.question")}</p>
-        <p className="reading w-fit max-w-[90%] rounded-2xl rounded-bl-sm border border-ink/20 px-4 py-2 text-base">
+        <p className="rise-sm ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-ink/10 px-4 py-2 text-sm" style={{ animationDelay: "2.7s" }}>
+          {t("preview.question")}
+        </p>
+        <p className="rise-sm reading w-fit max-w-[90%] rounded-2xl rounded-bl-sm border border-ink/20 px-4 py-2 text-base" style={{ animationDelay: "3.3s" }}>
           {t("preview.answer")}{" "}
-          <span className="ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border border-ink/50 px-1 font-sans text-xs">1</span>
+          <span className="pop ml-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border border-ink/50 px-1 font-sans text-xs" style={{ animationDelay: "3.9s" }}>
+            1
+          </span>
         </p>
       </div>
     </div>
@@ -123,13 +131,15 @@ export default function Landing() {
         <div>
           <h1 className="text-4xl leading-[1.08] sm:text-5xl lg:text-6xl">{t("hero.title")}</h1>
           <p className="reading mt-5 max-w-xl text-ink/80">{t("hero.subtitle")}</p>
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="rise mt-7 flex flex-wrap gap-3" style={{ "--wait": "150ms" } as React.CSSProperties}>
             <a href="#try" className="btn btn-primary text-lg">
               {t("hero.tryNow")}
             </a>
             {accountButton}
           </div>
-          <p className="muted mt-3 text-sm">{t("hero.note")}</p>
+          <p className="rise muted mt-3 text-sm" style={{ "--wait": "300ms" } as React.CSSProperties}>
+            {t("hero.note")}
+          </p>
         </div>
         <Preview />
       </section>
@@ -145,12 +155,12 @@ export default function Landing() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16" aria-labelledby="features-heading">
-        <h2 id="features-heading" className="text-3xl md:text-4xl">
+        <h2 id="features-heading" className="reveal text-3xl md:text-4xl">
           {t("features.title")}
         </h2>
         <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ key, icon }) => (
-            <li key={key} className="card">
+          {FEATURES.map(({ key, icon }, i) => (
+            <li key={key} className="reveal card" style={{ "--i": i % 3 } as React.CSSProperties}>
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/15 text-accent">
                 <Icon>{icon}</Icon>
               </span>
@@ -162,12 +172,12 @@ export default function Landing() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16" aria-labelledby="steps-heading">
-        <h2 id="steps-heading" className="text-3xl md:text-4xl">
+        <h2 id="steps-heading" className="reveal text-3xl md:text-4xl">
           {t("steps.title")}
         </h2>
         <ol className="mt-6 grid gap-6 md:grid-cols-3">
           {(["one", "two", "three"] as const).map((step, i) => (
-            <li key={step} className="flex gap-4">
+            <li key={step} className="reveal flex gap-4" style={{ "--i": i } as React.CSSProperties}>
               <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-ink text-base font-bold text-canvas">{i + 1}</span>
               <div>
                 <h3 className="text-lg font-semibold">{t(`steps.${step}.title`)}</h3>
@@ -179,7 +189,7 @@ export default function Landing() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16" aria-labelledby="privacy-heading">
-        <div className="card flex flex-col gap-4 md:flex-row md:items-center md:gap-8 md:p-8">
+        <div className="reveal card flex flex-col gap-4 md:flex-row md:items-center md:gap-8 md:p-8">
           <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-accent/15 text-accent">
             <Icon>
               <path d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6z" />
@@ -197,17 +207,19 @@ export default function Landing() {
 
       {!user && (
         <section className="mx-auto max-w-3xl px-4 text-center" aria-labelledby="cta-heading">
-          <h2 id="cta-heading" className="text-3xl md:text-4xl">
-            {t("cta.title")}
-          </h2>
-          <p className="muted mt-2">{t("cta.text")}</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link href="/signup" className="btn btn-primary text-lg">
-              {t("hero.createAccount")}
-            </Link>
-            <Link href="/login" className="btn btn-secondary">
-              {t("nav.login")}
-            </Link>
+          <div className="reveal">
+            <h2 id="cta-heading" className="text-3xl md:text-4xl">
+              {t("cta.title")}
+            </h2>
+            <p className="muted mt-2">{t("cta.text")}</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link href="/signup" className="btn btn-primary text-lg">
+                {t("hero.createAccount")}
+              </Link>
+              <Link href="/login" className="btn btn-secondary">
+                {t("nav.login")}
+              </Link>
+            </div>
           </div>
         </section>
       )}
