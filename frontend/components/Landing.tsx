@@ -183,19 +183,26 @@ export default function Landing() {
       </div>
 
       <section id="try" className="mx-auto max-w-4xl scroll-mt-20 px-4 pb-16" aria-labelledby="try-heading">
-        <h2 id="try-heading" className="text-3xl md:text-4xl">
-          {t("tool.title")}
-        </h2>
-        <p className="muted mb-5 mt-1">{t("tool.subtitle")}</p>
+        {/* Only the words above the tool arrive on scroll: the tool itself is there to be used and never waits for an animation. */}
+        <div className="reveal mb-5">
+          <h2 id="try-heading" className="text-3xl md:text-4xl">
+            {t("tool.title")}
+          </h2>
+          <span className="rule mt-2" aria-hidden="true" />
+          <p className="muted mt-2">{t("tool.subtitle")}</p>
+        </div>
         <div className="card md:p-8">
           <EInkForm endpoint={`${API_URL}/public/summarize`} />
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16" aria-labelledby="features-heading">
-        <h2 id="features-heading" className="reveal text-3xl md:text-4xl">
-          {t("features.title")}
-        </h2>
+        <div className="reveal">
+          <h2 id="features-heading" className="text-3xl md:text-4xl">
+            {t("features.title")}
+          </h2>
+          <span className="rule mt-2" aria-hidden="true" />
+        </div>
         <ul className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map(({ key, icon }, i) => (
             <li key={key} className="reveal lift card" style={{ "--i": i % 3 } as React.CSSProperties}>
@@ -210,9 +217,12 @@ export default function Landing() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16" aria-labelledby="steps-heading">
-        <h2 id="steps-heading" className="reveal text-3xl md:text-4xl">
-          {t("steps.title")}
-        </h2>
+        <div className="reveal">
+          <h2 id="steps-heading" className="text-3xl md:text-4xl">
+            {t("steps.title")}
+          </h2>
+          <span className="rule mt-2" aria-hidden="true" />
+        </div>
         <ol className="mt-6 grid gap-6 md:grid-cols-3">
           {(["one", "two", "three"] as const).map((step, i) => (
             <li key={step} className="reveal flex gap-4" style={{ "--i": i } as React.CSSProperties}>
