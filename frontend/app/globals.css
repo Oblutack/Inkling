@@ -343,6 +343,71 @@ body::before {
   }
 }
 
+/* Dropdowns. Where the browser lets the page style the open list (Chrome and Edge), it is drawn in the look of the page: a small
+   sheet of paper with soft corners, instead of the operating system's grey box. On a phone the native picker stays, because it is
+   what a finger expects there; and a browser that cannot do this simply keeps the plain list. */
+@media (hover: hover) and (pointer: fine) {
+  @supports (appearance: base-select) {
+    select,
+    ::picker(select) {
+      appearance: base-select;
+    }
+    select {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    select::picker-icon {
+      color: rgb(var(--ink) / 0.7);
+      transition: rotate 0.2s var(--ease-out);
+    }
+    select:open::picker-icon {
+      rotate: 180deg;
+    }
+    ::picker(select) {
+      background: rgb(var(--surface));
+      color: rgb(var(--ink));
+      border: 1px solid rgb(var(--ink) / 0.25);
+      border-radius: 0.75rem;
+      padding: 0.25rem;
+      margin-block: 0.25rem;
+      box-shadow: 0 14px 32px -14px rgb(0 0 0 / 0.4);
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 0.18s var(--ease-out), transform 0.18s var(--ease-out), display 0.18s allow-discrete, overlay 0.18s allow-discrete;
+    }
+    ::picker(select):popover-open {
+      opacity: 1;
+      transform: none;
+    }
+    @starting-style {
+      ::picker(select):popover-open {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+    }
+    select option {
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      background: transparent;
+      color: rgb(var(--ink));
+      transition: background-color 0.12s;
+    }
+    select option:hover,
+    select option:focus-visible {
+      background: rgb(var(--ink) / 0.1);
+    }
+    select option:checked {
+      background: rgb(var(--accent) / 0.16);
+      font-weight: 600;
+    }
+    select option::checkmark {
+      color: rgb(var(--accent));
+    }
+  }
+}
+
 /* Changing the theme: the new colours spread out from the button (components/ThemeToggle.tsx). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
