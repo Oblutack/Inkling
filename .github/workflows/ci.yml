@@ -89,7 +89,8 @@ jobs:
       # fastembed (search by meaning) does not allow Pillow 13 yet, so 12.3.0 stays. None of that code is reachable: photos.py opens
       # only JPEG, PNG, WebP and HEIC (see tests: test_only_the_accepted_kinds_of_picture_are_opened...), and Pillow touches no other
       # upload. Remove the ignores, and the Pillow rule in dependabot.yml, once fastembed allows Pillow 13.
-      - run: pip-audit -r requirements.txt --ignore-vuln GHSA-p4wg-p73j-c528 --ignore-vuln GHSA-65qm-jvmh-6pqg --ignore-vuln GHSA-58r4-6rv3-gfh8 --ignore-vuln GHSA-pchr-8j38-3x4p --ignore-vuln GHSA-q45j-58j2-45rg --ignore-vuln GHSA-462x-pgg6-55fp --ignore-vuln GHSA-c6hw-5grf-ff96 --ignore-vuln GHSA-vx6w-vv9f-6gvg
+      # The advisories accepted for Pillow, with the reasons, are in .github/pip-audit-ignore.txt.
+      - run: pip-audit -r requirements.txt $(sed 's/#.*//' ../.github/pip-audit-ignore.txt | awk 'NF {print "--ignore-vuln " $1}')
 
   frontend:
     runs-on: ubuntu-latest
