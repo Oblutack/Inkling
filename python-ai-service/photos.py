@@ -66,8 +66,42 @@ def is_image(name: str) -> bool:
     return name.lower().endswith(IMAGE_EXTENSIONS)
 
 
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+# The metadata block (eXIf) of a real photo is a few kilobytes; a huge one is only there to make the reading of it slow.
+MAX_PNG_EXIF_BYTES = 64 * 1024
+MAX_PNG_CHUNKS = 10_000
+
+
+def check_png(content: bytes, name: str) -> None:
+    """Refuses a PNG that is built to cost a lot to open, by reading only its outline (the lengths and names of its
+    parts) before Pillow is asked to open it: one that claims to be animated or to be enormous, or whose metadata block
+    is huge. A photo is none of these. Pillow's published problems with such files are fixed only in a version this
+    service cannot use yet, so they are kept out here."""
+    if not content.startswith(PNG_SIGNATURE):
+        return
+    refused = ocr.OcrError(422, f"{name} is a PNG that cannot be read here (animated, or with unusual parts).")
+    position, seen = len(PNG_SIGNATURE), 0
+    while position + 8 <= len(content) and seen < MAX_PNG_CHUNKS:
+        length = int.from_bytes(content[position : position + 4], "big")
+        kind = content[position + 4 : position + 8]
+        if kind == b"IHDR" and length >= 8:
+            width = int.from_bytes(content[position + 8 : position + 12], "big")
+            height = int.from_bytes(content[position + 12 : position + 16], "big")
+            if width * height > MAX_PIXELS:
+                raise ocr.OcrError(413, f"{name} is too large a picture to read ({width}x{height}).")
+        elif kind == b"acTL":  # the mark of an animated PNG
+            raise refused
+        elif kind == b"eXIf" and length > MAX_PNG_EXIF_BYTES:
+            raise refused
+        elif kind == b"IEND":
+            return
+        position += 12 + length  # length, name, data, check value
+        seen += 1
+
+
 def prepare(content: bytes, name: str) -> Image.Image:
     """The picture as an upright grey image of a size Tesseract reads well."""
+    check_png(content, name)
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", Image.DecompressionBombWarning)

@@ -1,6 +1,7 @@
 import io
 import random
 import subprocess
+import zlib
 
 import numpy as np
 import pytest
@@ -127,6 +128,46 @@ def test_a_picture_with_too_many_pixels_is_refused_before_it_is_opened_up(monkey
     with pytest.raises(ocr.OcrError) as caught:
         photos.prepare(encoded(Image.new("L", (200, 200), 255), "PNG"), "huge.png")
     assert caught.value.status == 413 and "huge.png" in caught.value.message
+
+
+def png_with_part(kind: bytes, data: bytes = b"") -> bytes:
+    """A real PNG with one more part (a chunk) put in right after its header, as a crafted file would have."""
+    original = encoded(Image.new("L", (60, 40), 255), "PNG")
+    after_header = len(photos.PNG_SIGNATURE) + 12 + 13  # the signature, then IHDR: length, name, 13 bytes, check value
+    part = len(data).to_bytes(4, "big") + kind + data + zlib.crc32(kind + data).to_bytes(4, "big")
+    return original[:after_header] + part + original[after_header:]
+
+
+def test_an_ordinary_png_passes_the_check():
+    photos.check_png(encoded(Image.new("L", (60, 40), 255), "PNG"), "page.png")
+    assert photos.prepare(encoded(Image.new("L", (60, 40), 255), "PNG"), "page.png").mode == "L"
+
+
+def test_a_png_that_says_it_is_animated_is_refused_before_it_is_opened():
+    crafted = png_with_part(b"acTL", (2).to_bytes(4, "big") + (0).to_bytes(4, "big"))
+    with pytest.raises(ocr.OcrError) as caught:
+        photos.prepare(crafted, "moving.png")
+    assert caught.value.status == 422 and "moving.png" in caught.value.message
+
+
+def test_a_png_with_a_huge_metadata_block_is_refused_but_a_small_one_is_fine():
+    with pytest.raises(ocr.OcrError):
+        photos.check_png(png_with_part(b"eXIf", b"Exif\x00\x00" * 20_000), "slow.png")
+    photos.check_png(png_with_part(b"eXIf", b"Exif\x00\x00MM\x00*" + b"\x00" * 200), "photo.png")
+
+
+def test_a_png_that_claims_an_enormous_size_is_refused_without_being_opened():
+    real = bytearray(encoded(Image.new("L", (60, 40), 255), "PNG"))
+    start = len(photos.PNG_SIGNATURE) + 8  # the width and the height are the first 8 bytes of the header
+    real[start : start + 8] = (22_000).to_bytes(4, "big") + (22_000).to_bytes(4, "big")
+    with pytest.raises(ocr.OcrError) as caught:
+        photos.prepare(bytes(real), "claims.png")
+    assert caught.value.status == 413 and "22000x22000" in caught.value.message
+
+
+def test_the_check_leaves_other_kinds_of_picture_and_cut_short_files_to_the_normal_handling():
+    photos.check_png(encoded(Image.new("L", (50, 50), 255), "JPEG"), "photo.jpg")
+    photos.check_png(photos.PNG_SIGNATURE + b"\x00\x00", "cut.png")  # nothing to read: Pillow gives the error
 
 
 def test_what_the_file_really_is_decides_not_its_name():
