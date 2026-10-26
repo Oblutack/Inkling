@@ -11,7 +11,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/prometheus/client_golang v1.25.0
 	golang.org/x/crypto v0.58.0
-	google.golang.org/api v0.306.0
+	google.golang.org/api v0.308.0
 	gorm.io/driver/postgres v1.6.3
 	gorm.io/gorm v1.31.2
 )
