@@ -21,7 +21,7 @@
     "framer-motion": "^12.43.0",
     "html2pdf.js": "^0.14.0",
     "jspdf": "^4.2.1",
-    "markdown-to-jsx": "^8.0.0",
+    "markdown-to-jsx": "^9.10.3",
     "next": "15.5.27",
     "pdfjs-dist": "^6.4.299",
     "qrcode": "^1.5.4",
