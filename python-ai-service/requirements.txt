@@ -1,9 +1,9 @@
-fastapi==0.142.2
+fastapi==0.161.1
 uvicorn[standard]==0.54.0
 python-dotenv==1.2.4
 python-multipart==0.0.32
 
-langchain-openai==1.6.7
+langchain-openai==1.7.2
 langchain-text-splitters==1.1.3
 
 pypdf==6.21.2
@@ -13,7 +13,7 @@ pypdf==6.21.2
 pypdfium2==5.14.0
 pillow==12.3.0
 # HEIC photos (what an iPhone saves, and a Mac exports): Pillow opens them once this is loaded. See photos.py.
-pillow-heif==1.8.0
+pillow-heif==1.8.1
 
 # used directly by llm.py (also a dependency of openai)
 httpx==0.28.1
@@ -21,8 +21,8 @@ httpx==0.28.1
 tiktoken==0.14.0
 
 prometheus-client==0.26.0
-sentry-sdk==2.71.0
+sentry-sdk==2.73.0
 
 # Local embeddings for searching documents by meaning (the model runs on ONNX, no GPU needed)
 fastembed==0.9.0
-numpy==2.4.6
+numpy==2.5.4
